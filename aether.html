@@ -290,8 +290,8 @@ function createEnemy() {
 	words[index].anchor.set(0.5);
 	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 
-	enemy.body.gravity.y = 25;
 	var enemy = stars.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
+	enemy.body.velocity.y = 100;
 
 	sprites[index] = enemy;
 	done[index] = true;
