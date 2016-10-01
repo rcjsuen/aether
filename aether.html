@@ -153,15 +153,15 @@ var sprites = [
 var time = 0;
 
 function create() {
-    game.add.sprite(0, 0, 'sheet', 'Backgrounds/stretch.png');
+	var bg = game.add.sprite(0, 0, 'sheet', 'Backgrounds/stretch.png');
+	bg.scale.setTo(2.0, 2.0);
 
 	bullets = game.add.physicsGroup();
 	bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
 	bullets.setAll('checkWorldBounds', true);
 	bullets.setAll('outOfBoundsKill', true);
 
-	player = game.add.sprite(window.innerWidth / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
-	player.scale.setTo(0.5, 0.5);
+	player = game.add.sprite(window.innerWidth / 2, 1000, 'sheet', 'PNG/playerShip1_red.png');
 	game.physics.arcade.enable(player);
 	player.body.collideWorldBounds = true;
 
@@ -189,11 +189,11 @@ function append(char) {
 }
 
 function createKeys() {
-	var scaling = 0.45;
-	var scalingY = 0.50;
-	var initialOffsetX = 0;
-	var initialOffsetY = 480;
-	var offset = 30 + 5;
+	var scaling = 1;
+	var scalingY = 1;
+	var initialOffsetX = ((window.innerWidth / 2) - 440) / 2;
+	var initialOffsetY = 1100;
+	var offset = 90;
 
 	var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
 	var row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
@@ -208,7 +208,7 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row2.length; i++) {
-		var button = buttons.create(initialOffsetX + 18 + (offset * i), initialOffsetY + 50, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
+		var button = buttons.create(initialOffsetX + 30 + (offset * i), initialOffsetY + 80, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row2[i];
@@ -216,14 +216,14 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row3.length; i++) {
-		var button = buttons.create(initialOffsetX + 35 + (offset * i), initialOffsetY + 100, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
+		var button = buttons.create(initialOffsetX + 60 + (offset * i), initialOffsetY + 160, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row3[i];
 		button.events.onInputDown.add(typed(character.toLowerCase()), this);
 	}
 
-	var backspaceButton = buttons.create(initialOffsetX + 40 + (offset * 7), initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
+	var backspaceButton = buttons.create(initialOffsetX + 90 + (offset * 7), initialOffsetY + 160, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
 	backspaceButton.scale.setTo(scaling, scalingY);
 	backspaceButton.inputEnabled = true;
 	backspaceButton.events.onInputDown.add(function() {
@@ -278,11 +278,9 @@ function createEnemy() {
 	}
 
 	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 24pt Arial', fill: "#8888FF", align: 'center' });
-	words[index].anchor.setTo(0.5);
 	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 
 	var enemy = stars.create(Math.floor(Math.random() * (window.innerWidth - 100)) + 50, -50, 'sheet', 'PNG/Enemies/enemyBlack1.png');
-	enemy.scale.setTo(0.5, 0.5);
 	enemy.addChild(words[index]);
 	enemy.body.gravity.y = 25;
 
@@ -313,7 +311,6 @@ function fireBullet () {
 
 		if (bullet) {
 			fire.play();
-			bullet.scale.setTo(0.5, 0.5);
 			bullet.reset(player.x + 17, player.y - 12);
 			bullet.body.velocity.y = -450;
 			bulletTime = game.time.time + 250;
