@@ -268,6 +268,13 @@ function update () {
 		}
 	}
 
+	for (var i = 0; i < words.length; i++) {
+		if (words[i] !== null && words[i] !== undefined) {
+			words[i].x = sprites[i].x;
+			words[i].y = sprites[i].y - 50;
+		}
+	}
+
 	game.physics.arcade.overlap(bullets, sprites, destroy, null, this);
 }
 
@@ -277,12 +284,14 @@ function createEnemy() {
 		index = Math.floor(Math.random() * japanese.length);
 	}
 
+	var x = Math.floor(Math.random() * (window.innerWidth - 100)) + 50;
+	var y = -100;
 	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 48pt Arial', fill: "#88FF88" });
+	words[index].anchor.set(0.5);
 	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 
-	var enemy = stars.create(Math.floor(Math.random() * (window.innerWidth - 100)) + 50, -50, 'sheet', 'PNG/Enemies/enemyBlack1.png');
-	enemy.addChild(words[index]);
 	enemy.body.gravity.y = 25;
+	var enemy = stars.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 
 	sprites[index] = enemy;
 	done[index] = true;
@@ -297,6 +306,8 @@ function destroy(word, bullet) {
 
 			for (var j = 0; j < japanese.length; j++) {
 				if (words[i].text === japanese[j]) {
+					sprites[i] = null;
+					words[i] = null;
 					done[j] = false;
 					break;
 				}
