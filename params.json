@@ -1,0 +1,6 @@
+{
+  "name": "Aether",
+  "tagline": "Aether is a typing game built on top of the Phaser game framework.",
+  "body": "### Aether\r\nAether is a reimagining of what I created in 2015 with [Zodiac](http://rcjsuen.github.io/zodiac/index.html). With that in mind, Aether is at its core something that is meant to help people learn languages. At the same time, it is also a typing game.\r\n\r\n### Play\r\nClick [here](game.html) to play Aether!\r\n\r\n### Credits\r\nAether is written by @rcjsuen.\r\n\r\nThe game assets were downloaded from [Kenney.nl](http://www.kenney.nl/). Thank you so much!\r\n\r\n### Support or Contact\r\nIf you have any feedback, suggestions, or bugs to report about Aether, please contact @rcjsuen or visit [Aether's GitHub page](https://github.com/rcjsuen/aether).\r\n",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
