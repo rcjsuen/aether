@@ -277,7 +277,7 @@ function createEnemy() {
 		index = Math.floor(Math.random() * japanese.length);
 	}
 
-	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 24pt Arial', fill: "#8888FF", align: 'center' });
+	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 48pt Arial', fill: "#88FF88" });
 	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 
 	var enemy = stars.create(Math.floor(Math.random() * (window.innerWidth - 100)) + 50, -50, 'sheet', 'PNG/Enemies/enemyBlack1.png');
