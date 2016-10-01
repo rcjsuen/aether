@@ -161,7 +161,7 @@ function create() {
 	bullets.setAll('checkWorldBounds', true);
 	bullets.setAll('outOfBoundsKill', true);
 
-	player = game.add.sprite(window.innerWidth / 2, 1000, 'sheet', 'PNG/playerShip1_red.png');
+	player = game.add.sprite(window.innerWidth / 2, 900, 'sheet', 'PNG/playerShip1_red.png');
 	game.physics.arcade.enable(player);
 	player.body.collideWorldBounds = true;
 
@@ -189,11 +189,11 @@ function append(char) {
 }
 
 function createKeys() {
-	var scaling = 1;
-	var scalingY = 1;
-	var initialOffsetX = ((window.innerWidth / 2) - 440) / 2;
-	var initialOffsetY = 1100;
-	var offset = 90;
+	var scaling = 1.25;
+	var scalingY = 1.5;
+	var initialOffsetX = ((window.innerWidth / 2) - 500) / 2;
+	var initialOffsetY = 1000;
+	var offset = 96;
 
 	var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
 	var row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
@@ -208,7 +208,7 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row2.length; i++) {
-		var button = buttons.create(initialOffsetX + 30 + (offset * i), initialOffsetY + 80, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
+		var button = buttons.create(initialOffsetX + 30 + (offset * i), initialOffsetY + 110, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row2[i];
@@ -216,14 +216,14 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row3.length; i++) {
-		var button = buttons.create(initialOffsetX + 60 + (offset * i), initialOffsetY + 160, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
+		var button = buttons.create(initialOffsetX + 60 + (offset * i), initialOffsetY + 220, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row3[i];
 		button.events.onInputDown.add(typed(character.toLowerCase()), this);
 	}
 
-	var backspaceButton = buttons.create(initialOffsetX + 90 + (offset * 7), initialOffsetY + 160, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
+	var backspaceButton = buttons.create(initialOffsetX + 90 + (offset * 7), initialOffsetY + 220, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
 	backspaceButton.scale.setTo(scaling, scalingY);
 	backspaceButton.inputEnabled = true;
 	backspaceButton.events.onInputDown.add(function() {
