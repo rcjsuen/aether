@@ -9,6 +9,7 @@
 		}
 	</style>
 	<script src="js/phaser.min.js"></script>
+	<script src="js/SaveCPU.js"></script>
 </head>
 <body>
 
@@ -153,6 +154,8 @@ var sprites = [
 var time = 0;
 
 function create() {
+	game.plugins.add(Phaser.Plugin.SaveCPU);
+
 	var bg = game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
 	bg.scale.setTo(7.0, 8.0);
 
