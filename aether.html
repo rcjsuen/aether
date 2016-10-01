@@ -5,6 +5,7 @@
 	<meta charset="UTF-8">
 	<style type="text/css">
 		body {
+			background-color: #000000;
 			margin: 0;
 		}
 	</style>
@@ -49,7 +50,7 @@ var japanese = [ "りんご", "猫", "車", "犬", "ペン", "消しゴム" ];
 var done = [];
 
 var game = new Phaser.Game(
-	window.innerWidth, window.innerHeight,
+	360, 640,
 	Phaser.CANVAS, '', { preload: preload, create: create, update: update, render: render });
 	
 function preload() {
@@ -154,17 +155,23 @@ var sprites = [
 var time = 0;
 
 function create() {
+	game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+	game.scale.pageAlignVertically = true;
+	game.scale.pageAlignHorizontally  = true;
+
 	game.plugins.add(Phaser.Plugin.SaveCPU);
 
 	var bg = game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-	bg.scale.setTo(7.0, 8.0);
+	bg.scale.setTo(2.0, 3.0);
 
 	bullets = game.add.physicsGroup();
 	bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
 	bullets.setAll('checkWorldBounds', true);
 	bullets.setAll('outOfBoundsKill', true);
 
-	player = game.add.sprite(window.innerWidth / 2, 900, 'sheet', 'PNG/playerShip1_red.png');
+	player = game.add.sprite(game.scale.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+	player.scale.setTo(0.5, 0.5);
+	player.anchor.setTo(0.5);
 	game.physics.arcade.enable(player);
 	player.body.collideWorldBounds = true;
 
@@ -173,7 +180,7 @@ function create() {
 	stars = game.add.group();
 	stars.enableBody = true;
 
-	scoreText = game.add.text(16, 16, null, { fontSize: '64px', fill: '#ffffff' });
+	scoreText = game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
 
 	buttons = game.add.group();
 	buttons.enableBody = true;
@@ -192,11 +199,11 @@ function append(char) {
 }
 
 function createKeys() {
-	var scaling = 1.25;
-	var scalingY = 1.5;
-	var initialOffsetX = ((window.innerWidth / 2) - 500) / 2;
-	var initialOffsetY = 1000;
-	var offset = 96;
+	var scaling = 0.45;
+	var scalingY = 0.50;
+	var initialOffsetX = 0;
+	var initialOffsetY = 480;
+	var offset = 30 + 5;
 
 	var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
 	var row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
@@ -211,7 +218,7 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row2.length; i++) {
-		var button = buttons.create(initialOffsetX + 30 + (offset * i), initialOffsetY + 110, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
+		var button = buttons.create(initialOffsetX + 18 + (offset * i), initialOffsetY + 50, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row2[i];
@@ -219,14 +226,14 @@ function createKeys() {
 	}
 	
 	for (var i = 0; i < row3.length; i++) {
-		var button = buttons.create(initialOffsetX + 60 + (offset * i), initialOffsetY + 220, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
+		var button = buttons.create(initialOffsetX + 35 + (offset * i), initialOffsetY + 100, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
 		button.scale.setTo(scaling, scalingY);
 		button.inputEnabled = true;
 		var character = row3[i];
 		button.events.onInputDown.add(typed(character.toLowerCase()), this);
 	}
 
-	var backspaceButton = buttons.create(initialOffsetX + 90 + (offset * 7), initialOffsetY + 220, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
+	var backspaceButton = buttons.create(initialOffsetX + 40 + (offset * 7), initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
 	backspaceButton.scale.setTo(scaling, scalingY);
 	backspaceButton.inputEnabled = true;
 	backspaceButton.events.onInputDown.add(function() {
@@ -274,7 +281,7 @@ function update () {
 	for (var i = 0; i < words.length; i++) {
 		if (words[i] !== null && words[i] !== undefined) {
 			words[i].x = sprites[i].x;
-			words[i].y = sprites[i].y - 50;
+			words[i].y = sprites[i].y - 25;
 		}
 	}
 
@@ -287,14 +294,14 @@ function createEnemy() {
 		index = Math.floor(Math.random() * japanese.length);
 	}
 
-	var x = Math.floor(Math.random() * (window.innerWidth - 100)) + 50;
-	var y = -100;
-	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 48pt Arial', fill: "#88FF88" });
+	var x = Math.floor(Math.random() * (game.width - 50)) + 50;
+	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
 	words[index].anchor.set(0.5);
 	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 
 	var enemy = stars.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
-	enemy.body.velocity.y = 100;
+	enemy.scale.setTo(0.5, 0.5);
+	enemy.body.velocity.y = 50;
 
 	sprites[index] = enemy;
 	done[index] = true;
@@ -325,7 +332,8 @@ function fireBullet () {
 
 		if (bullet) {
 			fire.play();
-			bullet.reset(player.x + 45, player.y - 12);
+			bullet.scale.setTo(0.5, 0.5);
+			bullet.reset(player.x - 2, player.y - 12);
 			bullet.body.velocity.y = -450;
 			bulletTime = game.time.time + 250;
 		}
