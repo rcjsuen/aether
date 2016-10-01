@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en">
+<head>
+	<title>Aether</title>
+	<meta charset="UTF-8">
+	<style type="text/css">
+		body {
+			margin: 0;
+		}
+	</style>
+	<script src="js/phaser.min.js"></script>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var uppercaseKeys = [
+	'A',
+	'B',
+	'C',
+	'D',
+	'E',
+	'F',
+	'G',
+	'H',
+	'I',
+	'J',
+	'K',
+	'L',
+	'M',
+	'N',
+	'O',
+	'P',
+	'Q',
+	'R',
+	'S',
+	'T',
+	'U',
+	'V',
+	'W',
+	'X',
+	'Y',
+	'Z',
+];
+
+var english = [ "apple", "cat", "car", "dog", "pen", "eraser" ];
+var japanese = [ "りんご", "猫", "車", "犬", "ペン", "消しゴム" ];
+var done = [];
+
+var game = new Phaser.Game(
+	window.innerWidth, window.innerHeight,
+	Phaser.CANVAS, '', { preload: preload, create: create, update: update, render: render });
+	
+function preload() {
+	window.addEventListener("keydown", function (event) {
+		if (event.keyCode == 8) {
+			event.preventDefault();
+			if (scoreText.text.length > 0) {
+				scoreText.text = scoreText.text.substring(0, scoreText.text.length - 1);
+			}
+		}
+	}, false);
+
+	for (var i = 0; i < english.length; i++) {
+		done[i] = false;
+	}
+
+	game.load.atlasJSONHash('sheet', 'assets/sheet.png', 'assets/sheet.json');
+
+	game.load.audio('fire', [ 'assets/audio/sfx_laser1.mp3', 'assets/audio/sfx_laser1.ogg', 'assets/audio/sfx_laser1.m4a' ]);
+}
+
+var player;
+var bullets;
+var buttons;
+
+var fire;
+
+var cursors;
+var fireButton;
+
+var scoreText;
+
+var bulletTime = 0;
+var bullet;
+
+var phaserKeys = [
+	Phaser.Keyboard.A,
+	Phaser.Keyboard.B,
+	Phaser.Keyboard.C,
+	Phaser.Keyboard.D,
+	Phaser.Keyboard.E,
+	Phaser.Keyboard.F,
+	Phaser.Keyboard.G,
+	Phaser.Keyboard.H,
+	Phaser.Keyboard.I,
+	Phaser.Keyboard.J,
+	Phaser.Keyboard.K,
+	Phaser.Keyboard.L,
+	Phaser.Keyboard.M,
+	Phaser.Keyboard.N,
+	Phaser.Keyboard.O,
+	Phaser.Keyboard.P,
+	Phaser.Keyboard.Q,
+	Phaser.Keyboard.R,
+	Phaser.Keyboard.S,
+	Phaser.Keyboard.T,
+	Phaser.Keyboard.U,
+	Phaser.Keyboard.V,
+	Phaser.Keyboard.W,
+	Phaser.Keyboard.X,
+	Phaser.Keyboard.Y,
+	Phaser.Keyboard.Z
+];
+
+var keys = [
+	'a',
+	'b',
+	'c',
+	'd',
+	'e',
+	'f',
+	'g',
+	'h',
+	'i',
+	'j',
+	'k',
+	'l',
+	'm',
+	'n',
+	'o',
+	'p',
+	'q',
+	'r',
+	's',
+	't',
+	'u',
+	'v',
+	'w',
+	'x',
+	'y',
+	'z',
+];
+
+var words = [
+	
+];
+
+var sprites = [
+
+];
+
+var time = 0;
+
+function create() {
+    game.add.sprite(0, 0, 'sheet', 'Backgrounds/stretch.png');
+
+	bullets = game.add.physicsGroup();
+	bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
+	bullets.setAll('checkWorldBounds', true);
+	bullets.setAll('outOfBoundsKill', true);
+
+	player = game.add.sprite(window.innerWidth / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
+	player.scale.setTo(0.5, 0.5);
+	game.physics.arcade.enable(player);
+	player.body.collideWorldBounds = true;
+
+	fire = game.add.audio('fire');
+
+	stars = game.add.group();
+	stars.enableBody = true;
+
+	scoreText = game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
+
+	buttons = game.add.group();
+	buttons.enableBody = true;
+	createKeys();
+	time = game.time.time;
+
+	for (var i = 0; i < keys.length; i++) {
+		var key = game.input.keyboard.addKey(phaserKeys[i]);
+		var character = keys[i];
+		key.onDown.add(typed(character), this);
+	}
+}
+
+function append(char) {
+	scoreText.text = scoreText.text + char;
+}
+
+function createKeys() {
+	var scaling = 0.45;
+	var scalingY = 0.50;
+	var initialOffsetX = 0;
+	var initialOffsetY = 480;
+	var offset = 30 + 5;
+
+	var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
+	var row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
+	var row3 = [ 'Z', 'X', 'C', 'V', 'B', 'N', 'M' ];
+
+	for (var i = 0; i < row.length; i++) {
+		var button = buttons.create(initialOffsetX + (offset * i), initialOffsetY, 'sheet', 'keyboard/letters/Keyboard_White_' + row[i] + '.png');
+		button.scale.setTo(scaling, scalingY);
+		button.inputEnabled = true;
+		var character = row[i];
+		button.events.onInputDown.add(typed(character.toLowerCase()), this);
+	}
+	
+	for (var i = 0; i < row2.length; i++) {
+		var button = buttons.create(initialOffsetX + 18 + (offset * i), initialOffsetY + 50, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
+		button.scale.setTo(scaling, scalingY);
+		button.inputEnabled = true;
+		var character = row2[i];
+		button.events.onInputDown.add(typed(character.toLowerCase()), this);
+	}
+	
+	for (var i = 0; i < row3.length; i++) {
+		var button = buttons.create(initialOffsetX + 35 + (offset * i), initialOffsetY + 100, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
+		button.scale.setTo(scaling, scalingY);
+		button.inputEnabled = true;
+		var character = row3[i];
+		button.events.onInputDown.add(typed(character.toLowerCase()), this);
+	}
+
+	var backspaceButton = buttons.create(initialOffsetX + 40 + (offset * 7), initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
+	backspaceButton.scale.setTo(scaling, scalingY);
+	backspaceButton.inputEnabled = true;
+	backspaceButton.events.onInputDown.add(function() {
+		if (scoreText.text.length > 0) {
+			scoreText.text = scoreText.text.substring(0, scoreText.text.length - 1);
+		}
+	}, this);
+}
+
+var newX = 0;
+
+function typed(character) {
+	return () => {
+		scoreText.text = scoreText.text + character;
+
+		for (var i = 0; i < words.length; i++) {
+			if (english[i].toLowerCase() === scoreText.text.trim()) {
+				var diff = sprites[i].body.x - player.body.x;
+				newX = diff;
+				scoreText.text = "";
+				break;
+			}
+		}
+	}
+}
+
+function update () {
+	if (newX !== 0) {
+		player.body.x = player.body.x + newX;
+		setTimeout(fireBullet, 0);
+		newX = 0;
+	}
+
+	if (game.time.time - time > 2000) {
+		time = game.time.time;
+
+		for (var i = 0; i < done.length; i++) {
+			if (!done[i]) {
+				createEnemy();
+				break;
+			}
+		}
+	}
+
+	game.physics.arcade.overlap(bullets, sprites, destroy, null, this);
+}
+
+function createEnemy() {
+	var index = Math.floor(Math.random() * japanese.length);
+	while (done[index]) {
+		index = Math.floor(Math.random() * japanese.length);
+	}
+
+	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 24pt Arial', fill: "#8888FF", align: 'center' });
+	words[index].anchor.setTo(0.5);
+	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+
+	var enemy = stars.create(Math.floor(Math.random() * (window.innerWidth - 100)) + 50, -50, 'sheet', 'PNG/Enemies/enemyBlack1.png');
+	enemy.scale.setTo(0.5, 0.5);
+	enemy.addChild(words[index]);
+	enemy.body.gravity.y = 25;
+
+	sprites[index] = enemy;
+	done[index] = true;
+}
+
+function destroy(word, bullet) {
+	for (var i = 0; i < sprites.length; i++) {
+		if (sprites[i] === word) {
+			sprites[i].destroy();
+			words[i].destroy();
+			bullet.destroy();
+
+			for (var j = 0; j < japanese.length; j++) {
+				if (words[i].text === japanese[j]) {
+					done[j] = false;
+					break;
+				}
+			}
+		}
+	}
+}
+
+function fireBullet () {
+	if (game.time.time > bulletTime) {
+		bullet = bullets.getFirstExists(false);
+
+		if (bullet) {
+			fire.play();
+			bullet.scale.setTo(0.5, 0.5);
+			bullet.reset(player.x + 17, player.y - 12);
+			bullet.body.velocity.y = -450;
+			bulletTime = game.time.time + 250;
+		}
+	}
+
+}
+
+function render () {
+
+}
+
+</script>
+</body>
+</html>
