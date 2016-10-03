@@ -83,7 +83,6 @@ var fireButton;
 
 var scoreText;
 
-var bulletTime = 0;
 var bullet;
 
 var phaserKeys = [
@@ -327,18 +326,14 @@ function destroy(word, bullet) {
 }
 
 function fireBullet () {
-	if (game.time.time > bulletTime) {
-		bullet = bullets.getFirstExists(false);
+	bullet = bullets.getFirstExists(false);
 
-		if (bullet) {
-			fire.play();
-			bullet.scale.setTo(0.5, 0.5);
-			bullet.reset(player.x - 2, player.y - 12);
-			bullet.body.velocity.y = -450;
-			bulletTime = game.time.time + 250;
-		}
+	if (bullet) {
+		fire.play();
+		bullet.scale.setTo(0.5, 0.5);
+		bullet.reset(player.x - 2, player.y - 12);
+		bullet.body.velocity.y = -450;
 	}
-
 }
 
 function render () {
