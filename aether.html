@@ -180,6 +180,7 @@ function create() {
 
 	stars = game.add.group();
 	stars.enableBody = true;
+	wordsGroup = game.add.group();
 
 	scoreText = game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
 
@@ -292,13 +293,14 @@ function createEnemy() {
 	}
 
 	var x = Math.floor(Math.random() * (game.width - 50)) + 50;
-	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
-	words[index].anchor.set(0.5);
-	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-
 	var enemy = stars.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 	enemy.scale.setTo(0.5, 0.5);
 	enemy.body.velocity.y = 50;
+
+	words[index] = game.add.text(0, 0, japanese[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
+	words[index].anchor.set(0.5);
+	words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+	wordsGroup.add(words[index]);
 
 	sprites[index] = enemy;
 	done[index] = true;
