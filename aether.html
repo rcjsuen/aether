@@ -83,6 +83,8 @@ var fireButton;
 
 var scoreText;
 
+var enemy = null;
+
 var bullet;
 
 var phaserKeys = [
@@ -242,16 +244,13 @@ function createKeys() {
 	}, this);
 }
 
-var newX = 0;
-
 function typed(character) {
 	return () => {
 		scoreText.text = scoreText.text + character;
 
 		for (var i = 0; i < words.length; i++) {
 			if (english[i].toLowerCase() === scoreText.text.trim()) {
-				var diff = sprites[i].body.x - player.body.x;
-				newX = diff;
+				enemy = sprites[i];
 				scoreText.text = "";
 				break;
 			}
@@ -260,10 +259,9 @@ function typed(character) {
 }
 
 function update () {
-	if (newX !== 0) {
-		player.body.x = player.body.x + newX;
-		setTimeout(fireBullet, 0);
-		newX = 0;
+	if (enemy !== null) {
+		setTimeout(fireBullet(), 0);
+		enemy = null;
 	}
 
 	if (game.time.time - time > 2000) {
@@ -325,14 +323,18 @@ function destroy(word, bullet) {
 	}
 }
 
-function fireBullet () {
-	bullet = bullets.getFirstExists(false);
+function fireBullet() {
+	var diff = ((enemy.body.x - player.body.x) / (enemy.body.y - player.body.y)) * -450;
+	return () => {
+		bullet = bullets.getFirstExists(false);
 
-	if (bullet) {
-		fire.play();
-		bullet.scale.setTo(0.5, 0.5);
-		bullet.reset(player.x - 2, player.y - 12);
-		bullet.body.velocity.y = -450;
+		if (bullet) {
+			fire.play();
+			bullet.scale.setTo(0.5, 0.5);
+			bullet.reset(player.x - 2, player.y - 12);
+			bullet.body.velocity.x = diff;
+			bullet.body.velocity.y = -450;
+		}
 	}
 }
 
