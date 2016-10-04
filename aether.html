@@ -254,27 +254,39 @@ function createKeys() {
 	}, this);
 }
 
+function intercept(character) {
+	for (var i = 0; i < enemyLetters.length; i++) {
+		if (enemyLetters[i] !== null && enemyLetters[i] !== undefined) {
+			if (enemyLetters[i].text === character) {
+				for (var j = 0; j < bullets.children.length; j++) {
+					if (bullets.children[j].target === enemyBullets[i]) {
+						return true;
+					}
+				}
+				scoreText.text = "";
+				bullet = bullets.getFirstExists(false);
+
+				if (bullet) {
+					fire.play();
+					bullet.scale.setTo(0.5, 0.5);
+					bullet.reset(player.x - 2, player.y - 12);
+					bullet.body.velocity.x = -enemyBullets[i].body.velocity.x;
+					bullet.body.velocity.y = -enemyBullets[i].body.velocity.y;
+					bullet.target = enemyBullets[i];
+				}
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 function typed(character) {
 	return () => {
 		scoreText.text = scoreText.text + character;
 		if (scoreText.text.trim().length === 1) {
-			for (var i = 0; i < enemyLetters.length; i++) {
-				if (enemyLetters[i] !== null && enemyLetters[i] !== undefined) {
-					if (enemyLetters[i].text === character) {
-						scoreText.text = "";
-						bullet = bullets.getFirstExists(false);
-
-						if (bullet) {
-							fire.play();
-							bullet.scale.setTo(0.5, 0.5);
-							bullet.reset(player.x - 2, player.y - 12);
-							bullet.body.velocity.x = -enemyBullets[i].body.velocity.x;
-							bullet.body.velocity.y = -enemyBullets[i].body.velocity.y;
-							bullet.target = enemyBullets[i];
-						}
-						break;
-					}
-				}
+			if (intercept(character)) {
+				return;
 			}
 		}
 
