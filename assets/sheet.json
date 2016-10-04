@@ -240,6 +240,14 @@
 	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":54},
 	"sourceSize": {"w":9,"h":54}
 },
+"PNG/Lasers/laserGreen13.png":
+{
+	"frame": {"x":1,"y":422,"w":9,"h":37},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":37},
+	"sourceSize": {"w":9,"h":37}
+},
 "PNG/playerShip1_red.png":
 {
 	"frame": {"x":1,"y":345,"w":99,"h":75},
@@ -255,6 +263,6 @@
 	"format": "RGBA8888",
 	"size": {"w":578,"h":476},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:e147bbd1ac4ca599a0efeef191109f20:a20b76e462af517780c4feae9b3bde26:9c44ecd7e9a522007eaff2949095bc1d$"
+	"smartupdate": "$TexturePacker:SmartUpdate:71f396c68b6cbcc1036b19e0cce06f00:6f71039e4bec11da38bece9bf91aefa6:9c44ecd7e9a522007eaff2949095bc1d$"
 }
 }
