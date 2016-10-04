@@ -86,6 +86,10 @@ var scoreText;
 var enemy = null;
 
 var bullet;
+var enemyBullets = [];
+var enemyLetters = [];
+var enemyBulletsGroup;
+var enemyBulletTimes = [];
 
 var phaserKeys = [
 	Phaser.Keyboard.A,
@@ -170,6 +174,11 @@ function create() {
 	bullets.setAll('checkWorldBounds', true);
 	bullets.setAll('outOfBoundsKill', true);
 
+	enemyBulletsGroup = game.add.physicsGroup();
+	enemyBulletsGroup.createMultiple(32,　'sheet', 'PNG/Lasers/laserGreen13.png', false);
+	enemyBulletsGroup.setAll('checkWorldBounds', true);
+	enemyBulletsGroup.setAll('outOfBoundsKill', true);
+
 	player = game.add.sprite(game.scale.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 	player.scale.setTo(0.5, 0.5);
 	player.anchor.setTo(0.5);
@@ -248,10 +257,30 @@ function createKeys() {
 function typed(character) {
 	return () => {
 		scoreText.text = scoreText.text + character;
+		if (scoreText.text.trim().length === 1) {
+			for (var i = 0; i < enemyLetters.length; i++) {
+				if (enemyLetters[i] !== null && enemyLetters[i] !== undefined) {
+					if (enemyLetters[i].text === character) {
+						scoreText.text = "";
+						bullet = bullets.getFirstExists(false);
+
+						if (bullet) {
+							fire.play();
+							bullet.scale.setTo(0.5, 0.5);
+							bullet.reset(player.x - 2, player.y - 12);
+							bullet.body.velocity.x = -enemyBullets[i].body.velocity.x;
+							bullet.body.velocity.y = -enemyBullets[i].body.velocity.y;
+							bullet.target = enemyBullets[i];
+						}
+						break;
+					}
+				}
+			}
+		}
 
 		for (var i = 0; i < words.length; i++) {
 			if (english[i].toLowerCase() === scoreText.text.trim()) {
-				enemy = sprites[i];
+				fireBullet(sprites[i]);
 				scoreText.text = "";
 				break;
 			}
@@ -260,11 +289,6 @@ function typed(character) {
 }
 
 function update () {
-	if (enemy !== null) {
-		setTimeout(fireBullet(), 0);
-		enemy = null;
-	}
-
 	for (var i = 0; i < sprites.length; i++) {
 		if (sprites[i] !== null && sprites[i] !== undefined && !sprites[i].inWorld) {
 			sprites[i].kill();
@@ -272,6 +296,15 @@ function update () {
 			sprites[i] = null;
 			words[i] = null;
 			done[i] = false;
+		}
+	}
+
+	for (var i = 0; i < enemyBullets.length; i++) {
+		if (enemyBullets[i] !== null && enemyBullets[i] !== undefined && !enemyBullets[i].inWorld) {
+			enemyBullets[i].kill();
+			enemyLetters[i].kill();
+			enemyBullets[i] = null;
+			enemyLetters[i] = null;
 		}
 	}
 
@@ -286,6 +319,15 @@ function update () {
 		}
 	}
 
+	for (var i = 0; i < enemyBulletTimes.length; i++) {
+		if (enemyBulletTimes[i] !== null && enemyBulletTimes[i] !== undefined) {
+			if (game.time.time > enemyBulletTimes[i] && sprites[i] != null) {
+				enemyBulletTimes[i] = null;
+				enemyBullets[i] = fireEnemyBullet(sprites[i], i);
+			}
+		}
+	}
+
 	for (var i = 0; i < words.length; i++) {
 		if (words[i] !== null && words[i] !== undefined) {
 			words[i].x = sprites[i].x;
@@ -293,7 +335,35 @@ function update () {
 		}
 	}
 
+	for (var i = 0; i < enemyBullets.length; i++) {
+		if (enemyBullets[i] !== null && enemyBullets[i] !== undefined) {
+			enemyLetters[i].x = enemyBullets[i].x;
+			enemyLetters[i].y = enemyBullets[i].y - 25;
+		}
+	}
+
 	game.physics.arcade.overlap(bullets, sprites, destroy, null, this);
+	game.physics.arcade.overlap(bullets, enemyBulletsGroup, destroy2, null, this);
+}
+
+function fireEnemyBullet(attackingEnemy, letterIndex) {
+	var diff = ((attackingEnemy.body.x - player.body.x) / (attackingEnemy.body.y - player.body.y)) * 90;
+	enemyBullet = enemyBulletsGroup.getFirstExists(false);
+
+	if (enemyBullet) {
+		fire.play();
+		enemyBullet.scale.setTo(0.5, 0.5);
+		enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
+		enemyBullet.body.velocity.x = diff;
+		enemyBullet.body.velocity.y = 100;
+
+		var index = Math.floor(Math.random() * 26);
+		var letter = game.add.text(0, 0, keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
+		letter.anchor.set(0.5);
+		letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		enemyLetters[letterIndex] = letter;
+	}
+	return enemyBullet;
 }
 
 function createEnemy() {
@@ -313,40 +383,49 @@ function createEnemy() {
 	wordsGroup.add(words[index]);
 
 	sprites[index] = enemy;
+	enemyBulletTimes[index] = Math.random() * 2000 + game.time.time;
 	done[index] = true;
 }
 
 function destroy(word, bullet) {
 	for (var i = 0; i < sprites.length; i++) {
-		if (sprites[i] === word) {
+		if (sprites[i] === word && bullet.target === sprites[i]) {
 			sprites[i].destroy();
 			words[i].destroy();
+			enemyBulletTimes[i] = null;
 			bullet.destroy();
 
-			for (var j = 0; j < japanese.length; j++) {
-				if (words[i].text === japanese[j]) {
-					sprites[i] = null;
-					words[i] = null;
-					done[j] = false;
-					break;
-				}
-			}
+			sprites[i] = null;
+			words[i] = null;
+			done[i] = false;
+			break;
 		}
 	}
 }
 
-function fireBullet() {
-	var diff = ((enemy.body.x - player.body.x) / (enemy.body.y - player.body.y)) * -450;
-	return () => {
-		bullet = bullets.getFirstExists(false);
-
-		if (bullet) {
-			fire.play();
-			bullet.scale.setTo(0.5, 0.5);
-			bullet.reset(player.x - 2, player.y - 12);
-			bullet.body.velocity.x = diff;
-			bullet.body.velocity.y = -450;
+function destroy2(word, bullet) {
+	for (var i = 0; i < enemyBullets.length; i++) {
+		if (enemyBullets[i] === bullet && word.target === enemyBullets[i]) {
+			enemyBullets[i].destroy();
+			enemyLetters[i].destroy();
+			enemyBullets[i] = null;
+			enemyLetters[i] = null;
+			word.destroy();
 		}
+	}
+}
+
+function fireBullet(enemy) {
+	var diff = ((enemy.body.x - player.body.x) / (enemy.body.y - player.body.y)) * -450;
+	bullet = bullets.getFirstExists(false);
+
+	if (bullet) {
+		fire.play();
+		bullet.scale.setTo(0.5, 0.5);
+		bullet.reset(player.x - 2, player.y - 12);
+		bullet.body.velocity.x = diff;
+		bullet.body.velocity.y = -450;
+		bullet.target = enemy;
 	}
 }
 
