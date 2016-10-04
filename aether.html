@@ -265,6 +265,16 @@ function update () {
 		enemy = null;
 	}
 
+	for (var i = 0; i < sprites.length; i++) {
+		if (sprites[i] !== null && sprites[i] !== undefined && !sprites[i].inWorld) {
+			sprites[i].kill();
+			words[i].kill();
+			sprites[i] = null;
+			words[i] = null;
+			done[i] = false;
+		}
+	}
+
 	if (game.time.time - time > 2000) {
 		time = game.time.time;
 
