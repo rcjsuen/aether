@@ -187,8 +187,8 @@ function create() {
 
 	fire = game.add.audio('fire');
 
-	stars = game.add.group();
-	stars.enableBody = true;
+	enemies = game.add.group();
+	enemies.enableBody = true;
 	wordsGroup = game.add.group();
 
 	scoreText = game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
@@ -373,7 +373,7 @@ function createEnemy() {
 	}
 
 	var x = Math.floor(Math.random() * (game.width - 50)) + 50;
-	var enemy = stars.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
+	var enemy = enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 	enemy.scale.setTo(0.5, 0.5);
 	enemy.body.velocity.y = 50;
 
@@ -387,9 +387,9 @@ function createEnemy() {
 	done[index] = true;
 }
 
-function destroy(word, bullet) {
+function destroy(sprite, bullet) {
 	for (var i = 0; i < sprites.length; i++) {
-		if (sprites[i] === word && bullet.target === sprites[i]) {
+		if (sprites[i] === sprite && bullet.target === sprites[i]) {
 			sprites[i].destroy();
 			words[i].destroy();
 			enemyBulletTimes[i] = null;
@@ -403,14 +403,14 @@ function destroy(word, bullet) {
 	}
 }
 
-function destroy2(word, bullet) {
+function destroy2(bullet, enemyBullet) {
 	for (var i = 0; i < enemyBullets.length; i++) {
-		if (enemyBullets[i] === bullet && word.target === enemyBullets[i]) {
+		if (enemyBullets[i] === enemyBullet && bullet.target === enemyBullets[i]) {
 			enemyBullets[i].destroy();
 			enemyLetters[i].destroy();
 			enemyBullets[i] = null;
 			enemyLetters[i] = null;
-			word.destroy();
+			bullet.destroy();
 		}
 	}
 }
