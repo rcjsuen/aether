@@ -2,8 +2,63 @@ class Aether extends Phaser.Game {
 
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
+		this.state.add('boot', Boot, true);
+		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
-		this.state.start('game', true, false);
+	}
+
+}
+
+class Boot extends Phaser.State {
+
+	public preload(): void {
+		this.load.atlasJSONHash('sheet', 'assets/sheet.png', 'assets/sheet.json');
+
+		this.load.audio('fire', [
+			'assets/audio/sfx_laser1.mp3',
+			'assets/audio/sfx_laser1.ogg',
+			'assets/audio/sfx_laser1.m4a'
+		]);
+	}
+
+	public create(): void {
+		this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+		this.game.scale.pageAlignVertically = true;
+		this.game.scale.pageAlignHorizontally  = true;
+
+		this.game.plugins.add(Phaser.Plugin.SaveCPU);
+		
+		this.game.state.start('title');
+	}
+}
+
+class TitleScreen extends Phaser.State {
+
+	public create(): void {
+		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
+		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+
+		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether",  { fontSize: '64px', fill: '#ffffff' });
+		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		titleText.anchor.setTo(0.5, 0.5);
+
+		let startText = this.game.add.text(this.game.width / 2, 400, "Start",  { fontSize: '28px', fill: '#ffffff' });
+		startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		startText.anchor.setTo(0.5, 0.5);
+		startText.inputEnabled = true;
+		startText.events.onInputOver.add(() => {
+			startText.fill = "#88ff88";
+		});
+		startText.events.onInputOut.add(() => {
+			startText.fill = "#ffffff";
+		});
+		startText.events.onInputDown.add(() => {
+			this.game.state.start('game');
+		});
+
+		let ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		ship.scale.setTo(0.5, 0.5);
+		ship.anchor.setTo(0.5);
 	}
 
 }
@@ -103,21 +158,11 @@ class Game extends Phaser.State {
 		for (var i = 0; i < this.english.length; i++) {
 			this.done[i] = false;
 		}
-
-		this.load.atlasJSONHash('sheet', 'assets/sheet.png', 'assets/sheet.json');
-
-		this.load.audio('fire', [ 'assets/audio/sfx_laser1.mp3', 'assets/audio/sfx_laser1.ogg', 'assets/audio/sfx_laser1.m4a' ]);
 	}
 
 	public create() {
-		this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
-		this.game.scale.pageAlignVertically = true;
-		this.game.scale.pageAlignHorizontally  = true;
-
-		this.game.plugins.add(Phaser.Plugin.SaveCPU);
-
-		var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-		bg.scale.setTo(2.0, 3.0);
+		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
+		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
 
 		this.bullets = this.game.add.physicsGroup();
 		this.bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
@@ -129,7 +174,7 @@ class Game extends Phaser.State {
 		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
 		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
-		this.player = this.game.add.sprite(this.game.scale.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.player = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 		this.player.health = 3;
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
