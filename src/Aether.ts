@@ -384,6 +384,16 @@ class Game extends Phaser.State {
 		}
 	}
 
+	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
+		player.damage(1);
+		
+		let index = this.enemyBullets.indexOf(enemyBullet);
+		this.enemyBullets[index].kill();
+		this.enemyLetters[index].kill();
+		this.enemyBullets[index] = null;
+		this.enemyLetters[index] = null;
+	}
+	
 	private fireBullet(enemy: Phaser.Sprite) {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
 		let bullet = this.bullets.getFirstExists(false);
