@@ -269,6 +269,7 @@ var Game = (function (_super) {
         }
         this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
         this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
+        this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
         this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
     };
     Game.prototype.fireEnemyBullet = function (attackingEnemy, letterIndex) {
@@ -332,6 +333,14 @@ var Game = (function (_super) {
                 bullet.kill();
             }
         }
+    };
+    Game.prototype.damageShip = function (player, enemy) {
+        player.damage(1);
+        var index = this.sprites.indexOf(enemy);
+        this.sprites[index].kill();
+        this.words[index].kill();
+        this.sprites[index] = null;
+        this.words[index] = null;
     };
     Game.prototype.damage = function (player, enemyBullet) {
         player.damage(1);
