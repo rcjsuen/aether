@@ -309,6 +309,7 @@ class Game extends Phaser.State {
 
 		this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
+		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
 	}
 
@@ -382,6 +383,16 @@ class Game extends Phaser.State {
 				bullet.kill();
 			}
 		}
+	}
+
+	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
+		player.damage(1);
+		
+		let index = this.sprites.indexOf(enemy);
+		this.sprites[index].kill();
+		this.words[index].kill();
+		this.sprites[index] = null;
+		this.words[index] = null;
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
