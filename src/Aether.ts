@@ -466,6 +466,7 @@ class Game extends Phaser.State {
 		this.words[index].kill();
 		this.sprites[index] = null;
 		this.words[index] = null;
+		this.targets[index] = null;
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
@@ -476,6 +477,7 @@ class Game extends Phaser.State {
 		this.enemyLetters[index].kill();
 		this.enemyBullets[index] = null;
 		this.enemyLetters[index] = null;
+		this.targets[index] = null;
 	}
 	
 	private fireBullet(enemy: Phaser.Sprite) {
