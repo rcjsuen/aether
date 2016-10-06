@@ -35,24 +35,80 @@ class Boot extends Phaser.State {
 
 class TitleScreen extends Phaser.State {
 
+	/**
+	 * The banner logo at the top of the title screen.
+	 */
+	private titleText: Phaser.Text;
+
+	/**
+	 * The text for the Easy difficulty.
+	 */
+	private easyText: Phaser.Text;
+
+	/**
+	 * The text for the Normal difficulty.
+	 */
+	private normalText: Phaser.Text;
+
+	/**
+	 * The text for the Hard difficulty.
+	 */
+	private hardText: Phaser.Text;
+
+	/**
+	 * The difficulty of the game that the user has selected.
+	 */
+	private difficulty: Difficulty;
+
+	/**
+	 * The player's ship that is shown on the title screen.
+	 */
+	private ship: Phaser.Sprite;
+
+	/**
+	 * The time that has been elapsed since the ship left the screen during
+	 * the intro transition.
+	 */
+	private timeElapsed: number;
+
 	public create(): void {
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
 		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
 
-		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether",  { fontSize: '64px', fill: '#ffffff' });
-		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-		titleText.anchor.setTo(0.5, 0.5);
+		this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether",  { fontSize: '64px', fill: '#ffffff' });
+		this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.titleText.anchor.setTo(0.5, 0.5);
 
-		this.createText("Easy", 300, Difficulty.Easy);
-		this.createText("Normal", 350, Difficulty.Normal);
-		this.createText("Hard", 400, Difficulty.Hard);
+		this.easyText = this.createText("Easy", 300, Difficulty.Easy);
+		this.normalText = this.createText("Normal", 350, Difficulty.Normal);
+		this.hardText = this.createText("Hard", 400, Difficulty.Hard);
 		
-		let ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
-		ship.scale.setTo(0.5, 0.5);
-		ship.anchor.setTo(0.5);
+		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.ship.scale.setTo(0.5, 0.5);
+		this.ship.anchor.setTo(0.5);
+		this.game.physics.arcade.enable(this.ship);
 	}
 
-	private createText(content: string, y: number, difficulty: Difficulty) {
+	/**
+	 * Fade out the texts on the screen.
+	 */
+	private fadeTexts(): void {
+		this.applyFade(this.titleText);
+		this.applyFade(this.easyText);
+		this.applyFade(this.normalText);
+		this.applyFade(this.hardText);
+	}
+
+	/**
+	 * Applies a fade out effect to the given text.
+	 * 
+	 * @param text the text to fade out
+	 */
+	private applyFade(text: Phaser.Text): void {
+		this.game.add.tween(text).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+	}
+
+	private createText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
 		let startText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
 		startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		startText.anchor.setTo(0.5, 0.5);
@@ -64,8 +120,23 @@ class TitleScreen extends Phaser.State {
 			startText.fill = "#ffffff";
 		});
 		startText.events.onInputDown.add(() => {
-			this.game.state.start('game', true, false, difficulty);
+			this.ship.body.velocity.y = -300;
+			this.difficulty = difficulty;
 		});
+		return startText;
+	}
+
+	public update(): void {
+		if (this.ship !== null && !this.ship.inWorld) {
+			this.timeElapsed = this.game.time.time;
+			this.fadeTexts();
+			this.ship.kill();
+			this.ship = null;
+		}
+
+		if (this.game.time.time > this.timeElapsed + 1000) {
+			this.game.state.start('game', true, false, this.difficulty);
+		}
 	}
 
 }
