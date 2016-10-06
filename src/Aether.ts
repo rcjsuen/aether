@@ -42,7 +42,17 @@ class TitleScreen extends Phaser.State {
 		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		titleText.anchor.setTo(0.5, 0.5);
 
-		let startText = this.game.add.text(this.game.width / 2, 400, "Start",  { fontSize: '28px', fill: '#ffffff' });
+		this.createText("Easy", 300, Difficulty.Easy);
+		this.createText("Normal", 350, Difficulty.Normal);
+		this.createText("Hard", 400, Difficulty.Hard);
+		
+		let ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		ship.scale.setTo(0.5, 0.5);
+		ship.anchor.setTo(0.5);
+	}
+
+	private createText(content: string, y: number, difficulty: Difficulty) {
+		let startText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
 		startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		startText.anchor.setTo(0.5, 0.5);
 		startText.inputEnabled = true;
@@ -53,14 +63,16 @@ class TitleScreen extends Phaser.State {
 			startText.fill = "#ffffff";
 		});
 		startText.events.onInputDown.add(() => {
-			this.game.state.start('game');
+			this.game.state.start('game', true, false, difficulty);
 		});
-
-		let ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
-		ship.scale.setTo(0.5, 0.5);
-		ship.anchor.setTo(0.5);
 	}
 
+}
+
+enum Difficulty {
+	Easy,
+	Normal,
+	Hard
 }
 
 class Game extends Phaser.State {
@@ -144,6 +156,18 @@ class Game extends Phaser.State {
 	
 	private english = [ "apple", "cat", "car", "dog", "pen", "eraser" ];
 	private japanese = [ "りんご", "猫", "車", "犬", "ペン", "消しゴム" ];
+
+	private difficulty: Difficulty;
+
+	public init(difficulty: Difficulty) {
+		this.difficulty = difficulty;
+
+		// if we're on easy mode, then just use the alphabet
+		if (difficulty === Difficulty.Easy) {
+			this.english = this.keys;
+			this.japanese = this.keys;
+		}
+	}
 
 	public preload() {
 		window.addEventListener("keydown", (event) => {
@@ -358,7 +382,11 @@ class Game extends Phaser.State {
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
 	}
 
-	private fireEnemyBullet(attackingEnemy, letterIndex) {
+	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
+		if (this.difficulty !== Difficulty.Hard) {
+			return null;
+		}
+
 		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
 		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
