@@ -5,6 +5,7 @@ class Aether extends Phaser.Game {
 		this.state.add('boot', Boot, true);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
+		this.state.add('gameover', GameOver);
 	}
 
 }
@@ -460,6 +461,9 @@ class Game extends Phaser.State {
 
 	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
 		player.damage(1);
+		if (player.health === 0) {
+			this.game.state.start('gameover');
+		}
 		
 		let index = this.sprites.indexOf(enemy);
 		this.sprites[index].kill();
@@ -471,6 +475,9 @@ class Game extends Phaser.State {
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
 		player.damage(1);
+		if (player.health === 0) {
+			this.game.state.start('gameover');
+		}
 		
 		let index = this.enemyBullets.indexOf(enemyBullet);
 		this.enemyBullets[index].kill();
@@ -495,6 +502,32 @@ class Game extends Phaser.State {
 		}
 	}
 
+}
+
+class GameOver extends Phaser.State {
+
+	public create(): void {
+		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
+		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+
+		let gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over",  { fontSize: '64px', fill: '#ffffff' });
+		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		gameOverText.anchor.setTo(0.5, 0.5);
+
+		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		titleText.inputEnabled = true;
+		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		titleText.anchor.setTo(0.5, 0.5);
+		titleText.events.onInputOver.add(() => {
+			titleText.fill = "#88ff88";
+		});
+		titleText.events.onInputOut.add(() => {
+			titleText.fill = "#ffffff";
+		});
+		titleText.events.onInputDown.add(() => {
+			this.game.state.start('title');
+		});
+	}
 }
 
 window.onload = () => {
