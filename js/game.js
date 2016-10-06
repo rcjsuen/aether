@@ -7,11 +7,104 @@ var Aether = (function (_super) {
     __extends(Aether, _super);
     function Aether() {
         _super.call(this, 360, 640, Phaser.CANVAS, '');
+        this.state.add('boot', Boot, true);
+        this.state.add('title', TitleScreen);
         this.state.add('game', Game);
-        this.state.start('game', true, false);
+        this.state.add('gameover', GameOver);
     }
     return Aether;
 }(Phaser.Game));
+var Boot = (function (_super) {
+    __extends(Boot, _super);
+    function Boot() {
+        _super.apply(this, arguments);
+    }
+    Boot.prototype.preload = function () {
+        this.load.atlasJSONHash('sheet', 'assets/sheet.png', 'assets/sheet.json');
+        this.load.audio('fire', [
+            'assets/audio/sfx_laser1.mp3',
+            'assets/audio/sfx_laser1.ogg',
+            'assets/audio/sfx_laser1.m4a'
+        ]);
+    };
+    Boot.prototype.create = function () {
+        this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
+        this.game.scale.pageAlignVertically = true;
+        this.game.scale.pageAlignHorizontally = true;
+        this.game.plugins.add(Phaser.Plugin.SaveCPU);
+        this.game.state.start('title');
+    };
+    return Boot;
+}(Phaser.State));
+var TitleScreen = (function (_super) {
+    __extends(TitleScreen, _super);
+    function TitleScreen() {
+        _super.apply(this, arguments);
+        this.timeElapsed = -1;
+    }
+    TitleScreen.prototype.init = function () {
+        this.timeElapsed = -1;
+    };
+    TitleScreen.prototype.create = function () {
+        var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
+        bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+        this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether", { fontSize: '64px', fill: '#ffffff' });
+        this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        this.titleText.anchor.setTo(0.5, 0.5);
+        this.easyText = this.createText("Easy", 300, Difficulty.Easy);
+        this.normalText = this.createText("Normal", 350, Difficulty.Normal);
+        this.hardText = this.createText("Hard", 400, Difficulty.Hard);
+        this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+        this.ship.scale.setTo(0.5, 0.5);
+        this.ship.anchor.setTo(0.5);
+        this.game.physics.arcade.enable(this.ship);
+    };
+    TitleScreen.prototype.fadeTexts = function () {
+        this.applyFade(this.titleText);
+        this.applyFade(this.easyText);
+        this.applyFade(this.normalText);
+        this.applyFade(this.hardText);
+    };
+    TitleScreen.prototype.applyFade = function (text) {
+        this.game.add.tween(text).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+    };
+    TitleScreen.prototype.createText = function (content, y, difficulty) {
+        var _this = this;
+        var startText = this.game.add.text(this.game.width / 2, y, content, { fontSize: '28px', fill: '#ffffff' });
+        startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        startText.anchor.setTo(0.5, 0.5);
+        startText.inputEnabled = true;
+        startText.events.onInputOver.add(function () {
+            startText.fill = "#88ff88";
+        });
+        startText.events.onInputOut.add(function () {
+            startText.fill = "#ffffff";
+        });
+        startText.events.onInputDown.add(function () {
+            _this.ship.body.velocity.y = -300;
+            _this.difficulty = difficulty;
+        });
+        return startText;
+    };
+    TitleScreen.prototype.update = function () {
+        if (this.ship !== null && !this.ship.inWorld) {
+            this.timeElapsed = this.game.time.time;
+            this.fadeTexts();
+            this.ship.kill();
+            this.ship = null;
+        }
+        if (this.timeElapsed !== -1 && this.game.time.time > this.timeElapsed + 1000) {
+            this.game.state.start('game', true, false, this.difficulty);
+        }
+    };
+    return TitleScreen;
+}(Phaser.State));
+var Difficulty;
+(function (Difficulty) {
+    Difficulty[Difficulty["Easy"] = 0] = "Easy";
+    Difficulty[Difficulty["Normal"] = 1] = "Normal";
+    Difficulty[Difficulty["Hard"] = 2] = "Hard";
+})(Difficulty || (Difficulty = {}));
 var Game = (function (_super) {
     __extends(Game, _super);
     function Game() {
@@ -72,6 +165,7 @@ var Game = (function (_super) {
             'y',
             'z',
         ];
+        this.player = null;
         this.words = [];
         this.sprites = [];
         this.done = [];
@@ -82,6 +176,37 @@ var Game = (function (_super) {
         this.english = ["apple", "cat", "car", "dog", "pen", "eraser"];
         this.japanese = ["りんご", "猫", "車", "犬", "ペン", "消しゴム"];
     }
+    Game.prototype.init = function (difficulty) {
+        if (this.player !== null) {
+            this.enemyBulletsGroup.forEach(function (sprite) {
+                sprite.kill();
+            }, this);
+            this.enemies.forEach(function (sprite) {
+                sprite.kill();
+            }, this);
+            this.wordsGroup.forEach(function (sprite) {
+                sprite.kill();
+            }, this);
+            for (var i = 0; i < this.enemyLetters.length; i++) {
+                if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
+                    this.enemyLetters[i].kill();
+                }
+            }
+            this.player.kill();
+            this.words = [];
+            this.sprites = [];
+            this.done = [];
+            this.enemyBullets = [];
+            this.enemyBulletTimes = [];
+            this.enemyLetters = [];
+            this.player = null;
+        }
+        this.difficulty = difficulty;
+        if (difficulty === Difficulty.Easy) {
+            this.english = this.keys;
+            this.japanese = this.keys;
+        }
+    };
     Game.prototype.preload = function () {
         var _this = this;
         window.addEventListener("keydown", function (event) {
@@ -95,16 +220,10 @@ var Game = (function (_super) {
         for (var i = 0; i < this.english.length; i++) {
             this.done[i] = false;
         }
-        this.load.atlasJSONHash('sheet', 'assets/sheet.png', 'assets/sheet.json');
-        this.load.audio('fire', ['assets/audio/sfx_laser1.mp3', 'assets/audio/sfx_laser1.ogg', 'assets/audio/sfx_laser1.m4a']);
     };
     Game.prototype.create = function () {
-        this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
-        this.game.scale.pageAlignVertically = true;
-        this.game.scale.pageAlignHorizontally = true;
-        this.game.plugins.add(Phaser.Plugin.SaveCPU);
         var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-        bg.scale.setTo(2.0, 3.0);
+        bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
         this.bullets = this.game.add.physicsGroup();
         this.bullets.createMultiple(32, 'sheet', 'PNG/Lasers/laserBlue01.png', false);
         this.bullets.setAll('checkWorldBounds', true);
@@ -113,7 +232,7 @@ var Game = (function (_super) {
         this.enemyBulletsGroup.createMultiple(32, 'sheet', 'PNG/Lasers/laserGreen13.png', false);
         this.enemyBulletsGroup.setAll('checkWorldBounds', true);
         this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
-        this.player = this.game.add.sprite(this.game.scale.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+        this.player = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
         this.player.health = 3;
         this.player.scale.setTo(0.5, 0.5);
         this.player.anchor.setTo(0.5);
@@ -273,6 +392,9 @@ var Game = (function (_super) {
         this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
     };
     Game.prototype.fireEnemyBullet = function (attackingEnemy, letterIndex) {
+        if (this.difficulty !== Difficulty.Hard) {
+            return null;
+        }
         var diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
         var diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
         var enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
@@ -336,19 +458,27 @@ var Game = (function (_super) {
     };
     Game.prototype.damageShip = function (player, enemy) {
         player.damage(1);
+        if (player.health === 0) {
+            this.game.state.start('gameover');
+        }
         var index = this.sprites.indexOf(enemy);
         this.sprites[index].kill();
         this.words[index].kill();
         this.sprites[index] = null;
         this.words[index] = null;
+        this.targets[index] = null;
     };
     Game.prototype.damage = function (player, enemyBullet) {
         player.damage(1);
+        if (player.health === 0) {
+            this.game.state.start('gameover');
+        }
         var index = this.enemyBullets.indexOf(enemyBullet);
         this.enemyBullets[index].kill();
         this.enemyLetters[index].kill();
         this.enemyBullets[index] = null;
         this.enemyLetters[index] = null;
+        this.targets[index] = null;
     };
     Game.prototype.fireBullet = function (enemy) {
         var diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
@@ -364,6 +494,34 @@ var Game = (function (_super) {
         }
     };
     return Game;
+}(Phaser.State));
+var GameOver = (function (_super) {
+    __extends(GameOver, _super);
+    function GameOver() {
+        _super.apply(this, arguments);
+    }
+    GameOver.prototype.create = function () {
+        var _this = this;
+        var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
+        bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+        var gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over", { fontSize: '64px', fill: '#ffffff' });
+        gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        gameOverText.anchor.setTo(0.5, 0.5);
+        var titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen", { fontSize: '28px', fill: '#ffffff', align: 'center' });
+        titleText.inputEnabled = true;
+        titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        titleText.anchor.setTo(0.5, 0.5);
+        titleText.events.onInputOver.add(function () {
+            titleText.fill = "#88ff88";
+        });
+        titleText.events.onInputOut.add(function () {
+            titleText.fill = "#ffffff";
+        });
+        titleText.events.onInputDown.add(function () {
+            _this.game.state.start('title');
+        });
+    };
+    return GameOver;
 }(Phaser.State));
 window.onload = function () {
     var game = new Aether();
