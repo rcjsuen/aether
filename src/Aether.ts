@@ -69,7 +69,11 @@ class TitleScreen extends Phaser.State {
 	 * The time that has been elapsed since the ship left the screen during
 	 * the intro transition.
 	 */
-	private timeElapsed: number;
+	private timeElapsed: number = -1;
+
+	public init(): void {
+		this.timeElapsed = -1;
+	}
 
 	public create(): void {
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
@@ -134,7 +138,7 @@ class TitleScreen extends Phaser.State {
 			this.ship = null;
 		}
 
-		if (this.game.time.time > this.timeElapsed + 1000) {
+		if (this.timeElapsed !== -1 && this.game.time.time > this.timeElapsed + 1000) {
 			this.game.state.start('game', true, false, this.difficulty);
 		}
 	}
@@ -214,7 +218,7 @@ class Game extends Phaser.State {
 	private enemyBulletsGroup: Phaser.Group;
 	private enemies: Phaser.Group;
 	private wordsGroup: Phaser.Group;
-	private player: Phaser.Sprite;
+	private player: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
 
 	private words: Phaser.Text[] = [];
@@ -232,6 +236,34 @@ class Game extends Phaser.State {
 	private difficulty: Difficulty;
 
 	public init(difficulty: Difficulty) {
+		if (this.player !== null) {
+			this.enemyBulletsGroup.forEach((sprite) => {
+				sprite.kill();
+			}, this);
+			this.enemies.forEach((sprite) => {
+				sprite.kill();
+			}, this);
+			this.wordsGroup.forEach((sprite) => {
+				sprite.kill();
+			}, this);
+
+			for (let i = 0; i < this.enemyLetters.length; i++) {
+				if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
+					this.enemyLetters[i].kill();
+				}
+			}
+
+			this.player.kill();
+
+			this.words = [];
+			this.sprites = [];
+			this.done = [];
+			this.enemyBullets = [];
+			this.enemyBulletTimes = [];
+			this.enemyLetters = [];
+			this.player = null;
+		}
+
 		this.difficulty = difficulty;
 
 		// if we're on easy mode, then just use the alphabet
