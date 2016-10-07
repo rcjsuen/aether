@@ -389,7 +389,8 @@ class Game extends Phaser.State {
 				if (this.enemyLetters[i].text === character) {
 					for (var j = 0; j < this.targets.length; j++) {
 						if (this.targets[j] === this.enemyBullets[i]) {
-							return true;
+							// this letter is already being handled, don't intercept
+							return false;
 						}
 					}
 
