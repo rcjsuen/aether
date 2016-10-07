@@ -531,7 +531,7 @@ class Game extends Phaser.State {
 			index = Math.floor(Math.random() * this.japanese.length);
 		}
 
-		var x = Math.floor(Math.random() * (this.game.width - 50)) + 50;
+		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
 		enemy.body.velocity.y = 50;
