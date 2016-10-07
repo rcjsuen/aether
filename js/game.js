@@ -6,7 +6,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 var Aether = (function (_super) {
     __extends(Aether, _super);
     function Aether() {
-        _super.call(this, 360, 640, Phaser.CANVAS, '');
+        _super.call(this, 360, window.innerHeight, Phaser.CANVAS, '');
         this.state.add('boot', Boot, true);
         this.state.add('title', TitleScreen);
         this.state.add('game', Game);
@@ -260,7 +260,7 @@ var Game = (function (_super) {
         var scaling = 0.45;
         var scalingY = 0.50;
         var initialOffsetX = 0;
-        var initialOffsetY = 480;
+        var initialOffsetY = 470;
         var offset = 30 + 5;
         var row = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
         var row2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
@@ -296,12 +296,15 @@ var Game = (function (_super) {
         }, this);
     };
     Game.prototype.intercept = function (character) {
+        if (this.scoreText.text.trim().length > 0) {
+            return false;
+        }
         for (var i = 0; i < this.enemyLetters.length; i++) {
             if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
                 if (this.enemyLetters[i].text === character) {
                     for (var j = 0; j < this.targets.length; j++) {
                         if (this.targets[j] === this.enemyBullets[i]) {
-                            return true;
+                            return false;
                         }
                     }
                     this.scoreText.text = "";
@@ -324,17 +327,25 @@ var Game = (function (_super) {
     Game.prototype.typed = function (character) {
         var _this = this;
         return function () {
-            _this.scoreText.text = _this.scoreText.text + character;
-            if (_this.scoreText.text.trim().length === 1) {
+            if (_this.difficulty === Difficulty.Easy) {
+                for (var i = 0; i < _this.words.length; i++) {
+                    if (_this.english[i].toLowerCase() === character) {
+                        _this.fireBullet(_this.sprites[i]);
+                        break;
+                    }
+                }
+            }
+            else {
                 if (_this.intercept(character)) {
                     return;
                 }
-            }
-            for (var i = 0; i < _this.words.length; i++) {
-                if (_this.english[i].toLowerCase() === _this.scoreText.text.trim()) {
-                    _this.fireBullet(_this.sprites[i]);
-                    _this.scoreText.text = "";
-                    break;
+                _this.scoreText.text = _this.scoreText.text + character;
+                for (var i = 0; i < _this.words.length; i++) {
+                    if (_this.english[i].toLowerCase() === _this.scoreText.text.trim()) {
+                        _this.fireBullet(_this.sprites[i]);
+                        _this.scoreText.text = "";
+                        break;
+                    }
                 }
             }
         };
@@ -417,7 +428,7 @@ var Game = (function (_super) {
         while (this.done[index]) {
             index = Math.floor(Math.random() * this.japanese.length);
         }
-        var x = Math.floor(Math.random() * (this.game.width - 50)) + 50;
+        var x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
         var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
         enemy.scale.setTo(0.5, 0.5);
         enemy.body.velocity.y = 50;
@@ -435,10 +446,11 @@ var Game = (function (_super) {
             if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
                 this.sprites[i].kill();
                 this.words[i].kill();
-                this.enemyBulletTimes[i] = null;
                 bullet.kill();
                 this.sprites[i] = null;
                 this.words[i] = null;
+                this.targets[index] = null;
+                this.enemyBulletTimes[i] = null;
                 this.done[i] = false;
                 break;
             }
@@ -452,6 +464,7 @@ var Game = (function (_super) {
                 this.enemyLetters[i].kill();
                 this.enemyBullets[i] = null;
                 this.enemyLetters[i] = null;
+                this.targets[index] = null;
                 bullet.kill();
             }
         }
