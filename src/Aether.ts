@@ -538,11 +538,12 @@ class Game extends Phaser.State {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
 				this.sprites[i].kill();
 				this.words[i].kill();
-				this.enemyBulletTimes[i] = null;
 				bullet.kill();
 
 				this.sprites[i] = null;
 				this.words[i] = null;
+				this.targets[index] = null;
+				this.enemyBulletTimes[i] = null;
 				this.done[i] = false;
 				break;
 			}
@@ -557,6 +558,7 @@ class Game extends Phaser.State {
 				this.enemyLetters[i].kill();
 				this.enemyBullets[i] = null;
 				this.enemyLetters[i] = null;
+				this.targets[index] = null;
 				bullet.kill();
 			}
 		}
