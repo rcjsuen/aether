@@ -6,7 +6,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 var Aether = (function (_super) {
     __extends(Aether, _super);
     function Aether() {
-        _super.call(this, 360, window.innerHeight, Phaser.CANVAS, '');
+        _super.call(this, 360, 640, Phaser.CANVAS, '');
         this.state.add('boot', Boot, true);
         this.state.add('title', TitleScreen);
         this.state.add('game', Game);
@@ -260,7 +260,7 @@ var Game = (function (_super) {
         var scaling = 0.45;
         var scalingY = 0.50;
         var initialOffsetX = 0;
-        var initialOffsetY = 470;
+        var initialOffsetY = 480;
         var offset = 30 + 5;
         var row = ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'];
         var row2 = ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'];
