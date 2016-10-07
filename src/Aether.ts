@@ -1,7 +1,7 @@
 class Aether extends Phaser.Game {
 
 	constructor() {
-		super(360, 640, Phaser.CANVAS, '');
+		super(360, window.innerHeight, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
@@ -337,7 +337,7 @@ class Game extends Phaser.State {
 		var scaling = 0.45;
 		var scalingY = 0.50;
 		var initialOffsetX = 0;
-		var initialOffsetY = 480;
+		var initialOffsetY = 470;
 		var offset = 30 + 5;
 
 		var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
@@ -379,12 +379,18 @@ class Game extends Phaser.State {
 	}
 
 	private intercept(character): boolean {
+		// only intercept if no word is being processed
+		if (this.scoreText.text.trim().length > 0) {
+			return false;
+		}
+
 		for (var i = 0; i < this.enemyLetters.length; i++) {
 			if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
 				if (this.enemyLetters[i].text === character) {
 					for (var j = 0; j < this.targets.length; j++) {
 						if (this.targets[j] === this.enemyBullets[i]) {
-							return true;
+							// this letter is already being handled, don't intercept
+							return false;
 						}
 					}
 
@@ -409,18 +415,26 @@ class Game extends Phaser.State {
 
 	private typed(character) {
 		return () => {
-			this.scoreText.text = this.scoreText.text + character;
-			if (this.scoreText.text.trim().length === 1) {
+			if (this.difficulty === Difficulty.Easy) {
+				// on Easy mode, process all characters immediately
+				for (var i = 0; i < this.words.length; i++) {
+					if (this.english[i].toLowerCase() === character) {
+						this.fireBullet(this.sprites[i]);
+						break;
+					}
+				}
+			} else {
 				if (this.intercept(character)) {
 					return;
 				}
-			}
 
-			for (var i = 0; i < this.words.length; i++) {
-				if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
-					this.fireBullet(this.sprites[i]);
-					this.scoreText.text = "";
-					break;
+				this.scoreText.text = this.scoreText.text + character;
+				for (var i = 0; i < this.words.length; i++) {
+					if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
+						this.fireBullet(this.sprites[i]);
+						this.scoreText.text = "";
+						break;
+					}
 				}
 			}
 		}
@@ -517,7 +531,7 @@ class Game extends Phaser.State {
 			index = Math.floor(Math.random() * this.japanese.length);
 		}
 
-		var x = Math.floor(Math.random() * (this.game.width - 50)) + 50;
+		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
 		enemy.body.velocity.y = 50;
@@ -538,11 +552,12 @@ class Game extends Phaser.State {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
 				this.sprites[i].kill();
 				this.words[i].kill();
-				this.enemyBulletTimes[i] = null;
 				bullet.kill();
 
 				this.sprites[i] = null;
 				this.words[i] = null;
+				this.targets[index] = null;
+				this.enemyBulletTimes[i] = null;
 				this.done[i] = false;
 				break;
 			}
@@ -557,6 +572,7 @@ class Game extends Phaser.State {
 				this.enemyLetters[i].kill();
 				this.enemyBullets[i] = null;
 				this.enemyLetters[i] = null;
+				this.targets[index] = null;
 				bullet.kill();
 			}
 		}
