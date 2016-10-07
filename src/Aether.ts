@@ -1,7 +1,7 @@
 class Aether extends Phaser.Game {
 
 	constructor() {
-		super(360, window.innerHeight, Phaser.CANVAS, '');
+		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
@@ -337,7 +337,7 @@ class Game extends Phaser.State {
 		var scaling = 0.45;
 		var scalingY = 0.50;
 		var initialOffsetX = 0;
-		var initialOffsetY = 470;
+		var initialOffsetY = 480;
 		var offset = 30 + 5;
 
 		var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
