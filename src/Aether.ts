@@ -379,6 +379,11 @@ class Game extends Phaser.State {
 	}
 
 	private intercept(character): boolean {
+		// only intercept if no word is being processed
+		if (this.scoreText.text.trim().length > 0) {
+			return false;
+		}
+
 		for (var i = 0; i < this.enemyLetters.length; i++) {
 			if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
 				if (this.enemyLetters[i].text === character) {
@@ -409,18 +414,26 @@ class Game extends Phaser.State {
 
 	private typed(character) {
 		return () => {
-			this.scoreText.text = this.scoreText.text + character;
-			if (this.scoreText.text.trim().length === 1) {
+			if (this.difficulty === Difficulty.Easy) {
+				// on Easy mode, process all characters immediately
+				for (var i = 0; i < this.words.length; i++) {
+					if (this.english[i].toLowerCase() === character) {
+						this.fireBullet(this.sprites[i]);
+						break;
+					}
+				}
+			} else {
 				if (this.intercept(character)) {
 					return;
 				}
-			}
 
-			for (var i = 0; i < this.words.length; i++) {
-				if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
-					this.fireBullet(this.sprites[i]);
-					this.scoreText.text = "";
-					break;
+				this.scoreText.text = this.scoreText.text + character;
+				for (var i = 0; i < this.words.length; i++) {
+					if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
+						this.fireBullet(this.sprites[i]);
+						this.scoreText.text = "";
+						break;
+					}
 				}
 			}
 		}
