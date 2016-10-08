@@ -582,12 +582,16 @@ class Game extends Phaser.State {
 			return null;
 		}
 
+		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
+		rotate = Phaser.Math.radToDeg(rotate) + 90;
+
 		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
 		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
 			this.fire.play();
+			enemyBullet.angle = rotate;
 			enemyBullet.scale.setTo(0.5, 0.5);
 			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
 			enemyBullet.body.velocity.x = diffX;
