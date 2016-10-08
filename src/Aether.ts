@@ -532,13 +532,13 @@ class Game extends Phaser.State {
 				// all the enemies of the wave have been cleared
 				this.wave++;
 
-				if (this.wave < this.englishWords.length) {
+				if (this.difficulty === Difficulty.Easy || this.wave === this.englishWords.length) {
+					// first wave on Easy mode or all waves cleared, game is finished then
+					this.finished = true;
+				} else {
 					this.english = this.englishWords[this.wave];
 					this.japanese = this.japaneseWords[this.wave];
 					this.done = [];
-				} else {
-					// all waves cleared, game is finished
-					this.finished = true;
 				}
 			}
 
