@@ -443,6 +443,7 @@ class Game extends Phaser.State {
 						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
 						let index = this.bullets.getChildIndex(bullet);
 						this.targets[index] = this.enemyBullets[i];
+						this.enemyLetters[i].fill = "#ff8888";
 					}
 					return true;
 				}
@@ -457,6 +458,7 @@ class Game extends Phaser.State {
 				// on Easy mode, process all characters immediately
 				for (var i = 0; i < this.words.length; i++) {
 					if (this.english[i].toLowerCase() === character) {
+						this.words[i].fill = "#ff8888";
 						this.fireBullet(this.sprites[i]);
 						break;
 					}
@@ -469,6 +471,7 @@ class Game extends Phaser.State {
 				this.scoreText.text = this.scoreText.text + character;
 				for (var i = 0; i < this.english.length; i++) {
 					if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
+						this.words[i].fill = "#ff8888";
 						this.fireBullet(this.sprites[i]);
 						this.scoreText.text = "";
 						break;
