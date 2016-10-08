@@ -229,11 +229,45 @@ class Game extends Phaser.State {
 	private enemyLetters: Phaser.Text[] = [];
 	private gameTime: number;
 	private targets: Phaser.Sprite[] = [];
+
+	private englishNumbers = [
+		"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
+	];
+	private japaneseNumbers = [
+		"一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
+	];
+
+	private englishColors = [
+		"red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
+	];
+	private japaneseColors = [
+		"赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
+	];
+
+	private englishSports = [
+		"basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
+	];
+	private japaneseSports = [
+		"バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
+	];
 	
-	private english = [ "apple", "cat", "car", "dog", "pen", "eraser" ];
-	private japanese = [ "りんご", "猫", "車", "犬", "ペン", "消しゴム" ];
+	private englishWords: string[][] = [ this.englishNumbers, this.englishColors, this.englishSports ];
+	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
+
+	/**
+	 * The wave that the user is currently on.
+	 */
+	private wave: number = 0;
+
+	private english = this.englishWords[this.wave];
+	private japanese = this.japaneseWords[this.wave];
 
 	private difficulty: Difficulty;
+
+	/**
+	 * Whether the game has finished or not.
+	 */
+	private finished: boolean = false;
 
 	public init(difficulty: Difficulty) {
 		if (this.player !== null) {
@@ -255,6 +289,10 @@ class Game extends Phaser.State {
 
 			this.player.kill();
 
+			this.wave = 0;
+			this.english = this.englishWords[this.wave];
+			this.japanese = this.japaneseWords[this.wave];
+			this.finished = false;
 			this.words = [];
 			this.sprites = [];
 			this.done = [];
@@ -405,6 +443,7 @@ class Game extends Phaser.State {
 						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
 						let index = this.bullets.getChildIndex(bullet);
 						this.targets[index] = this.enemyBullets[i];
+						this.enemyLetters[i].fill = "#ff8888";
 					}
 					return true;
 				}
@@ -419,6 +458,7 @@ class Game extends Phaser.State {
 				// on Easy mode, process all characters immediately
 				for (var i = 0; i < this.words.length; i++) {
 					if (this.english[i].toLowerCase() === character) {
+						this.words[i].fill = "#ff8888";
 						this.fireBullet(this.sprites[i]);
 						break;
 					}
@@ -429,8 +469,9 @@ class Game extends Phaser.State {
 				}
 
 				this.scoreText.text = this.scoreText.text + character;
-				for (var i = 0; i < this.words.length; i++) {
+				for (var i = 0; i < this.english.length; i++) {
 					if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
+						this.words[i].fill = "#ff8888";
 						this.fireBullet(this.sprites[i]);
 						this.scoreText.text = "";
 						break;
@@ -441,6 +482,22 @@ class Game extends Phaser.State {
 	}
 
 	public update() {
+		if (this.finished) {
+			let cleared = true;
+			for (let i = 0; i < this.sprites.length; i++) {
+				if (this.sprites[i] !== null) {
+					cleared = false;
+					break;
+				}
+			}
+
+			if (cleared) {
+				// all the enemies have been destroyed, the game is over
+				this.game.state.start('gameover');
+				return;
+			}
+		}
+
 		for (var i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] !== null && this.sprites[i] !== undefined && !this.sprites[i].inWorld) {
 				this.sprites[i].kill();
@@ -463,11 +520,31 @@ class Game extends Phaser.State {
 		if (this.game.time.time - this.gameTime > 2000) {
 			this.gameTime = this.game.time.time;
 
+			let waveCleared = true;
 			for (var i = 0; i < this.done.length; i++) {
 				if (!this.done[i]) {
-					this.createEnemy();
+					waveCleared = false;
 					break;
 				}
+			}
+
+			if (waveCleared) {
+				// all the enemies of the wave have been cleared
+				this.wave++;
+
+				if (this.difficulty === Difficulty.Easy || this.wave === this.englishWords.length) {
+					// first wave on Easy mode or all waves cleared, game is finished then
+					this.finished = true;
+				} else {
+					this.english = this.englishWords[this.wave];
+					this.japanese = this.japaneseWords[this.wave];
+					this.done = [];
+				}
+			}
+
+			if (!this.finished) {
+				// game isn't finished, create an enemy from the next wave
+				this.createEnemy();
 			}
 		}
 
@@ -505,12 +582,16 @@ class Game extends Phaser.State {
 			return null;
 		}
 
+		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
+		rotate = Phaser.Math.radToDeg(rotate) + 90;
+
 		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
 		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
 			this.fire.play();
+			enemyBullet.angle = rotate;
 			enemyBullet.scale.setTo(0.5, 0.5);
 			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
 			enemyBullet.body.velocity.x = diffX;
@@ -558,7 +639,6 @@ class Game extends Phaser.State {
 				this.words[i] = null;
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
-				this.done[i] = false;
 				break;
 			}
 		}
