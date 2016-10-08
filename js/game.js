@@ -173,8 +173,30 @@ var Game = (function (_super) {
         this.enemyBulletTimes = [];
         this.enemyLetters = [];
         this.targets = [];
-        this.english = ["apple", "cat", "car", "dog", "pen", "eraser"];
-        this.japanese = ["りんご", "猫", "車", "犬", "ペン", "消しゴム"];
+        this.englishNumbers = [
+            "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
+        ];
+        this.japaneseNumbers = [
+            "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
+        ];
+        this.englishColors = [
+            "red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
+        ];
+        this.japaneseColors = [
+            "赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
+        ];
+        this.englishSports = [
+            "basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
+        ];
+        this.japaneseSports = [
+            "バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
+        ];
+        this.englishWords = [this.englishNumbers, this.englishColors, this.englishSports];
+        this.japaneseWords = [this.japaneseNumbers, this.japaneseColors, this.japaneseSports];
+        this.wave = 0;
+        this.english = this.englishWords[this.wave];
+        this.japanese = this.japaneseWords[this.wave];
+        this.finished = false;
     }
     Game.prototype.init = function (difficulty) {
         if (this.player !== null) {
@@ -193,6 +215,10 @@ var Game = (function (_super) {
                 }
             }
             this.player.kill();
+            this.wave = 0;
+            this.english = this.englishWords[this.wave];
+            this.japanese = this.japaneseWords[this.wave];
+            this.finished = false;
             this.words = [];
             this.sprites = [];
             this.done = [];
@@ -317,6 +343,7 @@ var Game = (function (_super) {
                         bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
                         var index = this.bullets.getChildIndex(bullet);
                         this.targets[index] = this.enemyBullets[i];
+                        this.enemyLetters[i].fill = "#ff8888";
                     }
                     return true;
                 }
@@ -330,6 +357,7 @@ var Game = (function (_super) {
             if (_this.difficulty === Difficulty.Easy) {
                 for (var i = 0; i < _this.words.length; i++) {
                     if (_this.english[i].toLowerCase() === character) {
+                        _this.words[i].fill = "#ff8888";
                         _this.fireBullet(_this.sprites[i]);
                         break;
                     }
@@ -340,8 +368,9 @@ var Game = (function (_super) {
                     return;
                 }
                 _this.scoreText.text = _this.scoreText.text + character;
-                for (var i = 0; i < _this.words.length; i++) {
+                for (var i = 0; i < _this.english.length; i++) {
                     if (_this.english[i].toLowerCase() === _this.scoreText.text.trim()) {
+                        _this.words[i].fill = "#ff8888";
                         _this.fireBullet(_this.sprites[i]);
                         _this.scoreText.text = "";
                         break;
@@ -351,6 +380,19 @@ var Game = (function (_super) {
         };
     };
     Game.prototype.update = function () {
+        if (this.finished) {
+            var cleared = true;
+            for (var i_1 = 0; i_1 < this.sprites.length; i_1++) {
+                if (this.sprites[i_1] !== null) {
+                    cleared = false;
+                    break;
+                }
+            }
+            if (cleared) {
+                this.game.state.start('gameover');
+                return;
+            }
+        }
         for (var i = 0; i < this.sprites.length; i++) {
             if (this.sprites[i] !== null && this.sprites[i] !== undefined && !this.sprites[i].inWorld) {
                 this.sprites[i].kill();
@@ -370,11 +412,26 @@ var Game = (function (_super) {
         }
         if (this.game.time.time - this.gameTime > 2000) {
             this.gameTime = this.game.time.time;
+            var waveCleared = true;
             for (var i = 0; i < this.done.length; i++) {
                 if (!this.done[i]) {
-                    this.createEnemy();
+                    waveCleared = false;
                     break;
                 }
+            }
+            if (waveCleared) {
+                this.wave++;
+                if (this.difficulty === Difficulty.Easy || this.wave === this.englishWords.length) {
+                    this.finished = true;
+                }
+                else {
+                    this.english = this.englishWords[this.wave];
+                    this.japanese = this.japaneseWords[this.wave];
+                    this.done = [];
+                }
+            }
+            if (!this.finished) {
+                this.createEnemy();
             }
         }
         for (var i = 0; i < this.enemyBulletTimes.length; i++) {
@@ -406,11 +463,14 @@ var Game = (function (_super) {
         if (this.difficulty !== Difficulty.Hard) {
             return null;
         }
+        var rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
+        rotate = Phaser.Math.radToDeg(rotate) + 90;
         var diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
         var diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
         var enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
         if (enemyBullet) {
             this.fire.play();
+            enemyBullet.angle = rotate;
             enemyBullet.scale.setTo(0.5, 0.5);
             enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
             enemyBullet.body.velocity.x = diffX;
@@ -451,7 +511,6 @@ var Game = (function (_super) {
                 this.words[i] = null;
                 this.targets[index] = null;
                 this.enemyBulletTimes[i] = null;
-                this.done[i] = false;
                 break;
             }
         }
