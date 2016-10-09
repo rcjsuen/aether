@@ -1,11 +1,24 @@
 class Aether extends Phaser.Game {
 
+	/**
+	 * WordManager instance for managing the set of words that the
+	 * user is working on.
+	 */
+	private wordManager: WordManager = new WordManager();
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
 		this.state.add('gameover', GameOver);
+	}
+
+	/**
+	 * Returns the WordManager instance for this game.
+	 */
+	public getWordManager(): WordManager {
+		return this.wordManager;
 	}
 
 }
@@ -221,46 +234,20 @@ class Game extends Phaser.State {
 	private player: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
 
+	private wordCount: number = 0;
+
 	private words: Phaser.Text[] = [];
 	private sprites: Phaser.Sprite[] = [];
-	private done: boolean[] = [];
 	private enemyBullets: Phaser.Sprite[] = [];
 	private enemyBulletTimes: number[] = [];
 	private enemyLetters: Phaser.Text[] = [];
 	private gameTime: number;
 	private targets: Phaser.Sprite[] = [];
 
-	private englishNumbers = [
-		"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
-	];
-	private japaneseNumbers = [
-		"一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
-	];
-
-	private englishColors = [
-		"red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
-	];
-	private japaneseColors = [
-		"赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
-	];
-
-	private englishSports = [
-		"basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
-	];
-	private japaneseSports = [
-		"バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
-	];
-	
-	private englishWords: string[][] = [ this.englishNumbers, this.englishColors, this.englishSports ];
-	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
-
 	/**
 	 * The wave that the user is currently on.
 	 */
-	private wave: number = 0;
-
-	private english = this.englishWords[this.wave];
-	private japanese = this.japaneseWords[this.wave];
+	private wave: number = 1;
 
 	private difficulty: Difficulty;
 
@@ -269,7 +256,10 @@ class Game extends Phaser.State {
 	 */
 	private finished: boolean = false;
 
+	private wordManager: WordManager;
+
 	public init(difficulty: Difficulty) {
+		this.wordManager = (this.game as Aether).getWordManager();
 		if (this.player !== null) {
 			this.enemyBulletsGroup.forEach((sprite) => {
 				sprite.kill();
@@ -289,25 +279,23 @@ class Game extends Phaser.State {
 
 			this.player.kill();
 
+			this.wordCount = 0;
 			this.wave = 0;
-			this.english = this.englishWords[this.wave];
-			this.japanese = this.japaneseWords[this.wave];
 			this.finished = false;
 			this.words = [];
 			this.sprites = [];
-			this.done = [];
 			this.enemyBullets = [];
 			this.enemyBulletTimes = [];
 			this.enemyLetters = [];
 			this.player = null;
+			this.wordManager.reset();
 		}
 
 		this.difficulty = difficulty;
 
 		// if we're on easy mode, then just use the alphabet
 		if (difficulty === Difficulty.Easy) {
-			this.english = this.keys;
-			this.japanese = this.keys;
+			this.wordManager.shouldUseWords(false);
 		}
 	}
 
@@ -320,10 +308,6 @@ class Game extends Phaser.State {
 				}
 			}
 		}, false);
-
-		for (var i = 0; i < this.english.length; i++) {
-			this.done[i] = false;
-		}
 	}
 
 	public create() {
@@ -456,11 +440,14 @@ class Game extends Phaser.State {
 		return () => {
 			if (this.difficulty === Difficulty.Easy) {
 				// on Easy mode, process all characters immediately
-				for (var i = 0; i < this.words.length; i++) {
-					if (this.english[i].toLowerCase() === character) {
-						this.words[i].fill = "#ff8888";
-						this.fireBullet(this.sprites[i]);
-						break;
+				let word = this.wordManager.completed(character);
+				if (word !== null) {
+					for (let i = 0; i < this.words.length; i++) {
+						if (this.words[i] !== null && this.words[i].text === word) {
+							this.words[i].fill = "#ff8888";
+							this.fireBullet(this.sprites[i]);
+							break;
+						}
 					}
 				}
 			} else {
@@ -469,12 +456,15 @@ class Game extends Phaser.State {
 				}
 
 				this.scoreText.text = this.scoreText.text + character;
-				for (var i = 0; i < this.english.length; i++) {
-					if (this.english[i].toLowerCase() === this.scoreText.text.trim()) {
-						this.words[i].fill = "#ff8888";
-						this.fireBullet(this.sprites[i]);
-						this.scoreText.text = "";
-						break;
+				let word = this.wordManager.completed(this.scoreText.text);
+				if (word !== null) {
+					for (let i = 0; i < this.words.length; i++) {
+						if (this.words[i] !== null && this.words[i].text === word) {
+							this.words[i].fill = "#ff8888";
+							this.fireBullet(this.sprites[i]);
+							this.scoreText.text = "";
+							break;
+						}
 					}
 				}
 			}
@@ -492,7 +482,17 @@ class Game extends Phaser.State {
 			}
 
 			if (cleared) {
-				// all the enemies have been destroyed, the game is over
+				for (let i = 0; i < this.enemyBullets.length; i++) {
+					if (this.enemyBullets[i] !== null) {
+						cleared = false;
+						break;
+					}
+				}
+			}
+
+			if (cleared) {
+				// all the enemies and lasers have been destroyed,
+				// the game is over
 				this.game.state.start('gameover');
 				return;
 			}
@@ -500,11 +500,11 @@ class Game extends Phaser.State {
 
 		for (var i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] !== null && this.sprites[i] !== undefined && !this.sprites[i].inWorld) {
+				this.wordManager.remove(this.words[i].text);
 				this.sprites[i].kill();
 				this.words[i].kill();
 				this.sprites[i] = null;
 				this.words[i] = null;
-				this.done[i] = false;
 			}
 		}
 
@@ -517,34 +517,23 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (this.game.time.time - this.gameTime > 2000) {
+		if (!this.finished && this.game.time.time - this.gameTime > 2000) {
 			this.gameTime = this.game.time.time;
-
-			let waveCleared = true;
-			for (var i = 0; i < this.done.length; i++) {
-				if (!this.done[i]) {
-					waveCleared = false;
-					break;
-				}
-			}
-
-			if (waveCleared) {
-				// all the enemies of the wave have been cleared
-				this.wave++;
-
-				if (this.difficulty === Difficulty.Easy || this.wave === this.englishWords.length) {
-					// first wave on Easy mode or all waves cleared, game is finished then
-					this.finished = true;
+			
+			let word = this.wordManager.getNextWord();
+			if (word === null) {
+				if (this.difficulty !== Difficulty.Easy && this.wordManager.goToNextSet()) {
+					word = this.wordManager.getNextWord();
+					this.wordCount = 0;
 				} else {
-					this.english = this.englishWords[this.wave];
-					this.japanese = this.japaneseWords[this.wave];
-					this.done = [];
+					this.finished = true;
 				}
+				this.wave++;
 			}
 
 			if (!this.finished) {
 				// game isn't finished, create an enemy from the next wave
-				this.createEnemy();
+				this.createEnemy(word);
 			}
 		}
 
@@ -606,25 +595,20 @@ class Game extends Phaser.State {
 		return enemyBullet;
 	}
 
-	private createEnemy() {
-		var index = Math.floor(Math.random() * this.japanese.length);
-		while (this.done[index]) {
-			index = Math.floor(Math.random() * this.japanese.length);
-		}
-
+	private createEnemy(word: string) {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
 		enemy.body.velocity.y = 50;
 
-		this.words[index] = this.game.add.text(0, 0, this.japanese[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
-		this.words[index].anchor.set(0.5);
-		this.words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-		this.wordsGroup.add(this.words[index]);
+		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
+		this.words[this.wordCount].anchor.set(0.5);
+		this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.wordsGroup.add(this.words[this.wordCount]);
 
-		this.sprites[index] = enemy;
-		this.enemyBulletTimes[index] = Math.random() * 2000 + this.game.time.time;
-		this.done[index] = true;
+		this.sprites[this.wordCount] = enemy;
+		this.enemyBulletTimes[this.wordCount] = Math.random() * 2000 + this.game.time.time;
+		this.wordCount++;
 	}
 
 	private destroy(sprite, bullet) {
@@ -665,6 +649,7 @@ class Game extends Phaser.State {
 		}
 		
 		let index = this.sprites.indexOf(enemy);
+		this.wordManager.remove(this.words[index].text);
 		this.sprites[index].kill();
 		this.words[index].kill();
 		this.sprites[index] = null;
@@ -727,6 +712,172 @@ class GameOver extends Phaser.State {
 			this.game.state.start('title');
 		});
 	}
+}
+
+class WordManager {
+
+	private englishNumbers = [
+		"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
+	];
+	private japaneseNumbers = [
+		"一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
+	];
+
+	private englishColors = [
+		"red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
+	];
+	private japaneseColors = [
+		"赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
+	];
+
+	private englishSports = [
+		"basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
+	];
+	private japaneseSports = [
+		"バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
+	];
+	
+	private englishWords: string[][] = [ this.englishNumbers, this.englishColors, this.englishSports ];
+	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
+	private set: number;
+
+	private done: boolean[] = [];
+
+	private english: string[];
+	private japanese: string[];
+	
+	private pending: string[] = [];
+	private pendingTranslation: string[] = [];
+
+	private useWords: boolean = true;
+
+	private alphabet: string[] = [
+		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+		'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+	];
+
+	constructor() {
+		this.reset();
+	}
+
+	/**
+	 * Resets the internal state of this manager for a new run.
+	 */
+	public reset(): void {
+		this.set = 0;
+		this.english  = this.englishWords[this.set];
+		this.japanese  = this.japaneseWords[this.set];
+		
+		this.pending = [];
+		this.pendingTranslation = [];
+		this.done = [];
+		for (let i = 0; i < this.english.length; i++) {
+			this.done[i] = false;
+		}
+	}
+
+	/**
+	 * Defines whether words should be used or characters from the
+	 * English alphabet should be used.
+	 * 
+	 * @param useWords <tt>true</tt> if complete words should be used,
+	 * <tt>false</tt> if characters from the English alphabet should be
+	 * used instead 
+	 */
+	public shouldUseWords(useWords: boolean) {
+		this.useWords = useWords;
+
+		if (!useWords) {
+			this.english = this.alphabet;
+			this.done = [];
+			for (let i = 0; i < this.english.length; i++) {
+				this.done[i] = false;
+			}
+		}
+	}
+
+	/**
+	 * Informs the manager that the given word has been completed and
+	 * returns its corresponding translation if the given word is
+	 * valid.
+	 * 
+	 * @param word the word that has been completed
+	 * @return the given word's translation, or <tt>null</tt> if the
+	 * given word is invalid and cannot be found by the manager
+	 */
+	public completed(word: string): string {
+		let index = this.pending.indexOf(word);
+		if (index === -1) {
+			return null;
+		}
+
+		this.pending.splice(index, 1);
+		return this.useWords ? this.pendingTranslation.splice(index, 1)[0] : word;
+	}
+
+	/**
+	 * Removes the given translation from the manager.
+	 */
+	public remove(translation: string): void {
+		let index = this.pendingTranslation.indexOf(translation);
+		if (index !== -1) {
+			this.pendingTranslation.splice(index, 1);
+			this.pending.splice(index, 1);
+		}
+	}
+
+	/**
+	 * Asks the manager to move on to the next set of words and returns
+	 * an indication of success.
+	 * 
+	 * @return <tt>true</tt> if the manager has internally moved on to
+	 * process the next set of words, <tt>false</tt> if there are no
+	 * other sets to process
+	 * @see getNextWord
+	 */
+	public goToNextSet(): boolean {
+		this.set++;
+		if (this.set === this.englishWords.length) {
+			return false;
+		}
+
+		this.done = [];
+		this.english = this.englishWords[this.set];
+		this.japanese = this.japaneseWords[this.set];
+
+		for (let i = 0; i < this.english.length; i++) {
+			this.done[i] = false;
+		}
+		return true;
+	}
+
+	/**
+	 * Returns the next word that should be presented to the user.
+	 * 
+	 * @return the next word to show to the user, or <tt>null</tt> if
+	 * the current set of words has been exhausted
+	 * @see goToNextSet()
+	 */
+	public getNextWord(): string {
+		if (this.done.indexOf(false) === -1) {
+			return null;
+		}
+
+		var index = Math.floor(Math.random() * this.english.length);
+		while (this.done[index]) {
+			index = Math.floor(Math.random() * this.english.length);
+		}
+
+		this.done[index] = true;
+		this.pending.push(this.english[index]);
+		if (this.useWords) {
+			this.pendingTranslation.push(this.japanese[index]);
+			return this.japanese[index];
+		} else {
+			return this.english[index];
+		}
+	}
+
 }
 
 window.onload = () => {
