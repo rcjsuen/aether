@@ -7,11 +7,15 @@ var Aether = (function (_super) {
     __extends(Aether, _super);
     function Aether() {
         _super.call(this, 360, 640, Phaser.CANVAS, '');
+        this.wordManager = new WordManager();
         this.state.add('boot', Boot, true);
         this.state.add('title', TitleScreen);
         this.state.add('game', Game);
         this.state.add('gameover', GameOver);
     }
+    Aether.prototype.getWordManager = function () {
+        return this.wordManager;
+    };
     return Aether;
 }(Phaser.Game));
 var Boot = (function (_super) {
@@ -166,39 +170,18 @@ var Game = (function (_super) {
             'z',
         ];
         this.player = null;
+        this.wordCount = 0;
         this.words = [];
         this.sprites = [];
-        this.done = [];
         this.enemyBullets = [];
         this.enemyBulletTimes = [];
         this.enemyLetters = [];
         this.targets = [];
-        this.englishNumbers = [
-            "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
-        ];
-        this.japaneseNumbers = [
-            "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
-        ];
-        this.englishColors = [
-            "red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
-        ];
-        this.japaneseColors = [
-            "赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
-        ];
-        this.englishSports = [
-            "basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
-        ];
-        this.japaneseSports = [
-            "バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
-        ];
-        this.englishWords = [this.englishNumbers, this.englishColors, this.englishSports];
-        this.japaneseWords = [this.japaneseNumbers, this.japaneseColors, this.japaneseSports];
-        this.wave = 0;
-        this.english = this.englishWords[this.wave];
-        this.japanese = this.japaneseWords[this.wave];
+        this.wave = 1;
         this.finished = false;
     }
     Game.prototype.init = function (difficulty) {
+        this.wordManager = this.game.getWordManager();
         if (this.player !== null) {
             this.enemyBulletsGroup.forEach(function (sprite) {
                 sprite.kill();
@@ -215,22 +198,20 @@ var Game = (function (_super) {
                 }
             }
             this.player.kill();
+            this.wordCount = 0;
             this.wave = 0;
-            this.english = this.englishWords[this.wave];
-            this.japanese = this.japaneseWords[this.wave];
             this.finished = false;
             this.words = [];
             this.sprites = [];
-            this.done = [];
             this.enemyBullets = [];
             this.enemyBulletTimes = [];
             this.enemyLetters = [];
             this.player = null;
+            this.wordManager.reset();
         }
         this.difficulty = difficulty;
         if (difficulty === Difficulty.Easy) {
-            this.english = this.keys;
-            this.japanese = this.keys;
+            this.wordManager.shouldUseWords(false);
         }
     };
     Game.prototype.preload = function () {
@@ -243,9 +224,6 @@ var Game = (function (_super) {
                 }
             }
         }, false);
-        for (var i = 0; i < this.english.length; i++) {
-            this.done[i] = false;
-        }
     };
     Game.prototype.create = function () {
         var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
@@ -355,11 +333,14 @@ var Game = (function (_super) {
         var _this = this;
         return function () {
             if (_this.difficulty === Difficulty.Easy) {
-                for (var i = 0; i < _this.words.length; i++) {
-                    if (_this.english[i].toLowerCase() === character) {
-                        _this.words[i].fill = "#ff8888";
-                        _this.fireBullet(_this.sprites[i]);
-                        break;
+                var word = _this.wordManager.completed(character);
+                if (word !== null) {
+                    for (var i = 0; i < _this.words.length; i++) {
+                        if (_this.words[i] !== null && _this.words[i].text === word) {
+                            _this.words[i].fill = "#ff8888";
+                            _this.fireBullet(_this.sprites[i]);
+                            break;
+                        }
                     }
                 }
             }
@@ -368,12 +349,15 @@ var Game = (function (_super) {
                     return;
                 }
                 _this.scoreText.text = _this.scoreText.text + character;
-                for (var i = 0; i < _this.english.length; i++) {
-                    if (_this.english[i].toLowerCase() === _this.scoreText.text.trim()) {
-                        _this.words[i].fill = "#ff8888";
-                        _this.fireBullet(_this.sprites[i]);
-                        _this.scoreText.text = "";
-                        break;
+                var word = _this.wordManager.completed(_this.scoreText.text);
+                if (word !== null) {
+                    for (var i = 0; i < _this.words.length; i++) {
+                        if (_this.words[i] !== null && _this.words[i].text === word) {
+                            _this.words[i].fill = "#ff8888";
+                            _this.fireBullet(_this.sprites[i]);
+                            _this.scoreText.text = "";
+                            break;
+                        }
                     }
                 }
             }
@@ -389,17 +373,25 @@ var Game = (function (_super) {
                 }
             }
             if (cleared) {
+                for (var i_2 = 0; i_2 < this.enemyBullets.length; i_2++) {
+                    if (this.enemyBullets[i_2] !== null) {
+                        cleared = false;
+                        break;
+                    }
+                }
+            }
+            if (cleared) {
                 this.game.state.start('gameover');
                 return;
             }
         }
         for (var i = 0; i < this.sprites.length; i++) {
             if (this.sprites[i] !== null && this.sprites[i] !== undefined && !this.sprites[i].inWorld) {
+                this.wordManager.remove(this.words[i].text);
                 this.sprites[i].kill();
                 this.words[i].kill();
                 this.sprites[i] = null;
                 this.words[i] = null;
-                this.done[i] = false;
             }
         }
         for (var i = 0; i < this.enemyBullets.length; i++) {
@@ -410,28 +402,21 @@ var Game = (function (_super) {
                 this.enemyLetters[i] = null;
             }
         }
-        if (this.game.time.time - this.gameTime > 2000) {
+        if (!this.finished && this.game.time.time - this.gameTime > 2000) {
             this.gameTime = this.game.time.time;
-            var waveCleared = true;
-            for (var i = 0; i < this.done.length; i++) {
-                if (!this.done[i]) {
-                    waveCleared = false;
-                    break;
-                }
-            }
-            if (waveCleared) {
-                this.wave++;
-                if (this.difficulty === Difficulty.Easy || this.wave === this.englishWords.length) {
-                    this.finished = true;
+            var word = this.wordManager.getNextWord();
+            if (word === null) {
+                if (this.difficulty !== Difficulty.Easy && this.wordManager.goToNextSet()) {
+                    word = this.wordManager.getNextWord();
+                    this.wordCount = 0;
                 }
                 else {
-                    this.english = this.englishWords[this.wave];
-                    this.japanese = this.japaneseWords[this.wave];
-                    this.done = [];
+                    this.finished = true;
                 }
+                this.wave++;
             }
             if (!this.finished) {
-                this.createEnemy();
+                this.createEnemy(word);
             }
         }
         for (var i = 0; i < this.enemyBulletTimes.length; i++) {
@@ -483,22 +468,18 @@ var Game = (function (_super) {
         }
         return enemyBullet;
     };
-    Game.prototype.createEnemy = function () {
-        var index = Math.floor(Math.random() * this.japanese.length);
-        while (this.done[index]) {
-            index = Math.floor(Math.random() * this.japanese.length);
-        }
+    Game.prototype.createEnemy = function (word) {
         var x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
         var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
         enemy.scale.setTo(0.5, 0.5);
         enemy.body.velocity.y = 50;
-        this.words[index] = this.game.add.text(0, 0, this.japanese[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
-        this.words[index].anchor.set(0.5);
-        this.words[index].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-        this.wordsGroup.add(this.words[index]);
-        this.sprites[index] = enemy;
-        this.enemyBulletTimes[index] = Math.random() * 2000 + this.game.time.time;
-        this.done[index] = true;
+        this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
+        this.words[this.wordCount].anchor.set(0.5);
+        this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        this.wordsGroup.add(this.words[this.wordCount]);
+        this.sprites[this.wordCount] = enemy;
+        this.enemyBulletTimes[this.wordCount] = Math.random() * 2000 + this.game.time.time;
+        this.wordCount++;
     };
     Game.prototype.destroy = function (sprite, bullet) {
         var index = this.bullets.getChildIndex(bullet);
@@ -534,6 +515,7 @@ var Game = (function (_super) {
             this.game.state.start('gameover');
         }
         var index = this.sprites.indexOf(enemy);
+        this.wordManager.remove(this.words[index].text);
         this.sprites[index].kill();
         this.words[index].kill();
         this.sprites[index] = null;
@@ -595,6 +577,107 @@ var GameOver = (function (_super) {
     };
     return GameOver;
 }(Phaser.State));
+var WordManager = (function () {
+    function WordManager() {
+        this.englishNumbers = [
+            "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"
+        ];
+        this.japaneseNumbers = [
+            "一", "二", "三", "四", "五", "六", "七", "八", "九", "十"
+        ];
+        this.englishColors = [
+            "red", "blue", "green", "yellow", "black", "white", "brown", "purple", "pink", "orange"
+        ];
+        this.japaneseColors = [
+            "赤い", "青い", "緑", "黄色", "黒い", "白い", "茶色", "紫", "ピンク", "オレンジ"
+        ];
+        this.englishSports = [
+            "basketball", "tennis", "softball", "volleyball", "badminton", "baseball", "swimming"
+        ];
+        this.japaneseSports = [
+            "バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
+        ];
+        this.englishWords = [this.englishNumbers, this.englishColors, this.englishSports];
+        this.japaneseWords = [this.japaneseNumbers, this.japaneseColors, this.japaneseSports];
+        this.done = [];
+        this.pending = [];
+        this.pendingTranslation = [];
+        this.useWords = true;
+        this.alphabet = [
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+        ];
+        this.reset();
+    }
+    WordManager.prototype.reset = function () {
+        this.set = 0;
+        this.english = this.englishWords[this.set];
+        this.japanese = this.japaneseWords[this.set];
+        this.pending = [];
+        this.pendingTranslation = [];
+        this.done = [];
+        for (var i = 0; i < this.english.length; i++) {
+            this.done[i] = false;
+        }
+    };
+    WordManager.prototype.shouldUseWords = function (useWords) {
+        this.useWords = useWords;
+        if (!useWords) {
+            this.english = this.alphabet;
+            this.done = [];
+            for (var i = 0; i < this.english.length; i++) {
+                this.done[i] = false;
+            }
+        }
+    };
+    WordManager.prototype.completed = function (word) {
+        var index = this.pending.indexOf(word);
+        if (index === -1) {
+            return null;
+        }
+        this.pending.splice(index, 1);
+        return this.useWords ? this.pendingTranslation.splice(index, 1)[0] : word;
+    };
+    WordManager.prototype.remove = function (translation) {
+        var index = this.pendingTranslation.indexOf(translation);
+        if (index !== -1) {
+            this.pendingTranslation.splice(index, 1);
+            this.pending.splice(index, 1);
+        }
+    };
+    WordManager.prototype.goToNextSet = function () {
+        this.set++;
+        if (this.set === this.englishWords.length) {
+            return false;
+        }
+        this.done = [];
+        this.english = this.englishWords[this.set];
+        this.japanese = this.japaneseWords[this.set];
+        for (var i = 0; i < this.english.length; i++) {
+            this.done[i] = false;
+        }
+        return true;
+    };
+    WordManager.prototype.getNextWord = function () {
+        if (this.done.indexOf(false) === -1) {
+            return null;
+        }
+        var index = Math.floor(Math.random() * this.english.length);
+        while (this.done[index]) {
+            index = Math.floor(Math.random() * this.english.length);
+        }
+        this.done[index] = true;
+        this.pending.push(this.english[index]);
+        if (this.useWords) {
+            this.pendingTranslation.push(this.japanese[index]);
+            return this.japanese[index];
+        }
+        else {
+            return this.english[index];
+        }
+    };
+    return WordManager;
+}());
 window.onload = function () {
     var game = new Aether();
 };
