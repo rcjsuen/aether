@@ -420,6 +420,8 @@ class Game extends Phaser.State {
 					let bullet = this.bullets.getFirstExists(false);
 
 					if (bullet) {
+						this.player.angle = 0;
+						bullet.angle = 0;
 						this.fire.play();
 						bullet.scale.setTo(0.5, 0.5);
 						bullet.reset(this.player.x - 2, this.player.y - 12);
@@ -675,9 +677,13 @@ class Game extends Phaser.State {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
 		let bullet = this.bullets.getFirstExists(false);
 		let index = this.bullets.getChildIndex(bullet);
+		let rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, enemy.body.x, enemy.body.y);
+		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
 		if (bullet) {
 			this.fire.play();
+			this.player.angle = rotate;
+			bullet.angle = rotate;
 			bullet.scale.setTo(0.5, 0.5);
 			bullet.reset(this.player.x - 2, this.player.y - 12);
 			bullet.body.velocity.x = diff;
