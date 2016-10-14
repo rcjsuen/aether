@@ -294,9 +294,7 @@ class Game extends Phaser.State {
 		this.difficulty = difficulty;
 
 		// if we're on easy mode, then just use the alphabet
-		if (difficulty === Difficulty.Easy) {
-			this.wordManager.shouldUseWords(false);
-		}
+		this.wordManager.shouldUseWords(difficulty !== Difficulty.Easy);
 	}
 
 	public preload() {
@@ -793,12 +791,14 @@ class WordManager {
 	public shouldUseWords(useWords: boolean) {
 		this.useWords = useWords;
 
-		if (!useWords) {
+		if (useWords) {
+			this.english = this.englishWords[this.set];
+		} else {
 			this.english = this.alphabet;
-			this.done = [];
-			for (let i = 0; i < this.english.length; i++) {
-				this.done[i] = false;
-			}
+		}
+		this.done = [];
+		for (let i = 0; i < this.english.length; i++) {
+			this.done[i] = false;
 		}
 	}
 
