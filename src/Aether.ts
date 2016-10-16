@@ -224,6 +224,8 @@ class Game extends Phaser.State {
 		'z',
 	];
 
+	private waitTime: number = 5000;
+
 	private scoreText: Phaser.Text;
 	private buttons: Phaser.Group;
 	private bullets: Phaser.Group;
@@ -423,8 +425,8 @@ class Game extends Phaser.State {
 						this.fire.play();
 						bullet.scale.setTo(0.5, 0.5);
 						bullet.reset(this.player.x - 2, this.player.y - 12);
-						bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x;
-						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
+						bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x * 3;
+						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y * 3;
 						let index = this.bullets.getChildIndex(bullet);
 						this.targets[index] = this.enemyBullets[i];
 						this.enemyLetters[i].fill = "#ff8888";
@@ -517,7 +519,8 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (!this.finished && this.game.time.time - this.gameTime > 2000) {
+		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+			this.waitTime = 5000;
 			this.gameTime = this.game.time.time;
 			
 			let word = this.wordManager.getNextWord();
@@ -574,8 +577,8 @@ class Game extends Phaser.State {
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
-		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
-		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
+		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
+		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 8;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
@@ -599,7 +602,7 @@ class Game extends Phaser.State {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
-		enemy.body.velocity.y = 50;
+		enemy.body.velocity.y = 15;
 
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
@@ -607,13 +610,13 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = Math.random() * 2000 + this.game.time.time;
+		this.enemyBulletTimes[this.wordCount] = 3000 + (Math.random() * 2000) + this.game.time.time;
 		this.wordCount++;
 	}
 
 	private destroy(sprite, bullet) {
 		let index = this.bullets.getChildIndex(bullet);
-		for (var i = 0; i < this.sprites.length; i++) {
+		for (let i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
 				this.sprites[i].kill();
 				this.words[i].kill();
@@ -623,7 +626,21 @@ class Game extends Phaser.State {
 				this.words[i] = null;
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
-				break;
+
+				for (let j = 0; j < this.sprites.length; j++) {
+					if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
+						// another enemy already on the screen, set spawn time at five seconds
+						this.waitTime = 5000;
+						return;
+					}
+				}
+
+				if (this.game.time.time - this.gameTime < 4000) {
+					// no enemies on the screen and there's still a
+					// long delay, spawn another one in one second
+					this.waitTime = 1000;
+					this.gameTime = this.game.time.time;
+				}
 			}
 		}
 	}
