@@ -96,9 +96,9 @@ class TitleScreen extends Phaser.State {
 		this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.titleText.anchor.setTo(0.5, 0.5);
 
-		this.easyText = this.createText("Easy", 300, Difficulty.Easy);
-		this.normalText = this.createText("Normal", 350, Difficulty.Normal);
-		this.hardText = this.createText("Hard", 400, Difficulty.Hard);
+		this.easyText = this.createText("Easy", 300, Difficulty.EASY);
+		this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
+		this.hardText = this.createText("Hard", 400, Difficulty.HARD);
 		
 		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
@@ -159,9 +159,9 @@ class TitleScreen extends Phaser.State {
 }
 
 enum Difficulty {
-	Easy,
-	Normal,
-	Hard
+	EASY,
+	NORMAL,
+	HARD
 }
 
 class Game extends Phaser.State {
@@ -296,7 +296,7 @@ class Game extends Phaser.State {
 		this.difficulty = difficulty;
 
 		// if we're on easy mode, then just use the alphabet
-		this.wordManager.shouldUseWords(difficulty !== Difficulty.Easy);
+		this.wordManager.shouldUseWords(difficulty !== Difficulty.EASY);
 	}
 
 	public preload() {
@@ -440,7 +440,7 @@ class Game extends Phaser.State {
 
 	private typed(character) {
 		return () => {
-			if (this.difficulty === Difficulty.Easy) {
+			if (this.difficulty === Difficulty.EASY) {
 				// on Easy mode, process all characters immediately
 				let word = this.wordManager.completed(character);
 				if (word !== null) {
@@ -525,7 +525,7 @@ class Game extends Phaser.State {
 			
 			let word = this.wordManager.getNextWord();
 			if (word === null) {
-				if (this.difficulty !== Difficulty.Easy && this.wordManager.goToNextSet()) {
+				if (this.difficulty !== Difficulty.EASY && this.wordManager.goToNextSet()) {
 					word = this.wordManager.getNextWord();
 					this.wordCount = 0;
 				} else {
@@ -570,7 +570,7 @@ class Game extends Phaser.State {
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
-		if (this.difficulty !== Difficulty.Hard) {
+		if (this.difficulty !== Difficulty.HARD) {
 			return null;
 		}
 
