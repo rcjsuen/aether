@@ -839,13 +839,22 @@ class WordManager {
 	}
 
 	/**
-	 * Removes the given translation from the manager.
+	 * Removes the given key and associated word from the manager.
+	 * 
+	 * @param key the key and its associated word to remove
 	 */
-	public remove(translation: string): void {
-		let index = this.pendingTranslation.indexOf(translation);
-		if (index !== -1) {
-			this.pendingTranslation.splice(index, 1);
-			this.pending.splice(index, 1);
+	public remove(key: string): void {
+		if (this.useWords) {
+			let index = this.pendingTranslation.indexOf(key);
+			if (index !== -1) {
+				this.pendingTranslation.splice(index, 1);
+				this.pending.splice(index, 1);
+			}
+		} else {
+			let index = this.pending.indexOf(key);
+			if (index !== -1) {
+				this.pending.splice(index, 1);
+			}
 		}
 	}
 
