@@ -350,7 +350,7 @@ class Game extends Phaser.State {
 		this.enemies.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '24px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
 		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
 		this.inputText.anchor.setTo(0.5, 0.5);
 
