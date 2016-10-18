@@ -409,8 +409,8 @@ class Game extends Phaser.State {
 		backspaceButton.scale.setTo(scaling, scalingY);
 		backspaceButton.inputEnabled = true;
 		backspaceButton.events.onInputDown.add(function() {
-			if (this.scoreText.text.length > 0) {
-				this.scoreText.text = this.scoreText.text.substring(0, this.scoreText.text.length - 1);
+			if (this.inputText.text.length > 0) {
+				this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 			}
 		}, this);
 	}
