@@ -226,7 +226,20 @@ class Game extends Phaser.State {
 
 	private waitTime: number = 5000;
 
+	/**
+	 * The text field to display the user's score.
+	 */
 	private scoreText: Phaser.Text;
+
+	/**
+	 * The user's current score.
+	 */
+	private score: number = 0;
+
+	/**
+	 * The text field where the user's input will be displayed with.
+	 */
+	private inputText: Phaser.Text;
 	private buttons: Phaser.Group;
 	private bullets: Phaser.Group;
 	
@@ -303,8 +316,8 @@ class Game extends Phaser.State {
 		window.addEventListener("keydown", (event) => {
 			if (event.keyCode == 8) {
 				event.preventDefault();
-				if (this.scoreText.text.length > 0) {
-					this.scoreText.text = this.scoreText.text.substring(0, this.scoreText.text.length - 1);
+				if (this.inputText.text.length > 0) {
+					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 				}
 			}
 		}, false);
@@ -324,7 +337,7 @@ class Game extends Phaser.State {
 		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
 		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
-		this.player = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
 		this.player.health = 3;
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
@@ -337,7 +350,9 @@ class Game extends Phaser.State {
 		this.enemies.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '24px', fill: '#ffffff' });
+		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
+		this.inputText.anchor.setTo(0.5, 0.5);
 
 		this.buttons = this.game.add.group();
 		this.buttons.enableBody = true;
@@ -352,7 +367,7 @@ class Game extends Phaser.State {
 	}
 
 	private append(char) {
-		this.scoreText.text = this.scoreText.text + char;
+		this.inputText.text = this.inputText.text + char;
 	}
 
 	private createKeys() {
@@ -402,7 +417,7 @@ class Game extends Phaser.State {
 
 	private intercept(character): boolean {
 		// only intercept if no word is being processed
-		if (this.scoreText.text.trim().length > 0) {
+		if (this.inputText.text.trim().length > 0) {
 			return false;
 		}
 
@@ -416,7 +431,7 @@ class Game extends Phaser.State {
 						}
 					}
 
-					this.scoreText.text = "";
+					this.inputText.text = "";
 					let bullet = this.bullets.getFirstExists(false);
 
 					if (bullet) {
@@ -457,14 +472,14 @@ class Game extends Phaser.State {
 					return;
 				}
 
-				this.scoreText.text = this.scoreText.text + character;
-				let word = this.wordManager.completed(this.scoreText.text);
+				this.inputText.text = this.inputText.text + character;
+				let word = this.wordManager.completed(this.inputText.text);
 				if (word !== null) {
 					for (let i = 0; i < this.words.length; i++) {
 						if (this.words[i] !== null && this.words[i].text === word) {
 							this.words[i].fill = "#ff8888";
 							this.fireBullet(this.sprites[i]);
-							this.scoreText.text = "";
+							this.inputText.text = "";
 							break;
 						}
 					}
@@ -628,6 +643,9 @@ class Game extends Phaser.State {
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
 
+				this.score++;
+				this.scoreText.text = "Score: " + this.score;
+
 				for (let j = 0; j < this.sprites.length; j++) {
 					if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
 						// another enemy already on the screen, set spawn time at five seconds
@@ -656,6 +674,9 @@ class Game extends Phaser.State {
 				this.enemyLetters[i] = null;
 				this.targets[index] = null;
 				bullet.kill();
+
+				this.score++;
+				this.scoreText.text = "Score: " + this.score;
 			}
 		}
 	}
