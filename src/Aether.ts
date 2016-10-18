@@ -630,6 +630,17 @@ class Game extends Phaser.State {
 		this.wordCount++;
 	}
 
+	/**
+	 * Add the given value to the current score.
+	 * 
+	 * @param increment the amount to add to the current total score,
+	 * must be a positive number
+	 */
+	private updateScore(increment: number) {
+		this.score += increment;
+		this.scoreText.text = "Score: " + this.score;
+	}
+
 	private destroy(sprite, bullet) {
 		let index = this.bullets.getChildIndex(bullet);
 		for (let i = 0; i < this.sprites.length; i++) {
@@ -643,8 +654,7 @@ class Game extends Phaser.State {
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
 
-				this.score++;
-				this.scoreText.text = "Score: " + this.score;
+				this.updateScore(1);
 
 				for (let j = 0; j < this.sprites.length; j++) {
 					if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
@@ -675,8 +685,7 @@ class Game extends Phaser.State {
 				this.targets[index] = null;
 				bullet.kill();
 
-				this.score++;
-				this.scoreText.text = "Score: " + this.score;
+				this.updateScore(1);
 			}
 		}
 	}
