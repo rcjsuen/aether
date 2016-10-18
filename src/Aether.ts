@@ -567,6 +567,7 @@ class Game extends Phaser.State {
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
+		this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this)
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
@@ -659,19 +660,32 @@ class Game extends Phaser.State {
 		}
 	}
 
+	/**
+	 * Kills the given enemy sprite in addition to removing any other
+	 * retained information about this enemy.
+	 * 
+	 * @param enemy the enemy to kill
+	 */
+	private kill(enemy: Phaser.Sprite) {
+		let index = this.sprites.indexOf(enemy);
+		// the enemy might have already been killed if it collided
+		// with two keyboard buttons
+		if (index !== -1) {
+			this.wordManager.remove(this.words[index].text);
+			this.sprites[index].kill();
+			this.words[index].kill();
+			this.sprites[index] = null;
+			this.words[index] = null;
+			this.targets[index] = null;
+		}
+	}
+
 	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
 		player.damage(1);
 		if (player.health === 0) {
 			this.game.state.start('gameover');
 		}
-		
-		let index = this.sprites.indexOf(enemy);
-		this.wordManager.remove(this.words[index].text);
-		this.sprites[index].kill();
-		this.words[index].kill();
-		this.sprites[index] = null;
-		this.words[index] = null;
-		this.targets[index] = null;
+		this.kill(enemy);
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
@@ -686,6 +700,17 @@ class Game extends Phaser.State {
 		this.enemyBullets[index] = null;
 		this.enemyLetters[index] = null;
 		this.targets[index] = null;
+	}
+
+	/**
+	 * Callback function for when an enemy collides with the virtual
+	 * keyboard.
+	 * 
+	 * @param enemy the enemy sprite model
+	 * @param button the keyboard button sprite model
+	 */
+	private buttonsCollided(enemy: Phaser.Sprite, button: Phaser.Sprite) {
+		this.kill(enemy);
 	}
 	
 	private fireBullet(enemy: Phaser.Sprite) {
