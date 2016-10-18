@@ -96,9 +96,9 @@ class TitleScreen extends Phaser.State {
 		this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.titleText.anchor.setTo(0.5, 0.5);
 
-		this.easyText = this.createText("Easy", 300, Difficulty.Easy);
-		this.normalText = this.createText("Normal", 350, Difficulty.Normal);
-		this.hardText = this.createText("Hard", 400, Difficulty.Hard);
+		this.easyText = this.createText("Easy", 300, Difficulty.EASY);
+		this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
+		this.hardText = this.createText("Hard", 400, Difficulty.HARD);
 		
 		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
@@ -159,9 +159,9 @@ class TitleScreen extends Phaser.State {
 }
 
 enum Difficulty {
-	Easy,
-	Normal,
-	Hard
+	EASY,
+	NORMAL,
+	HARD
 }
 
 class Game extends Phaser.State {
@@ -224,7 +224,22 @@ class Game extends Phaser.State {
 		'z',
 	];
 
+	private waitTime: number = 5000;
+
+	/**
+	 * The text field to display the user's score.
+	 */
 	private scoreText: Phaser.Text;
+
+	/**
+	 * The user's current score.
+	 */
+	private score: number = 0;
+
+	/**
+	 * The text field where the user's input will be displayed with.
+	 */
+	private inputText: Phaser.Text;
 	private buttons: Phaser.Group;
 	private bullets: Phaser.Group;
 	
@@ -294,17 +309,15 @@ class Game extends Phaser.State {
 		this.difficulty = difficulty;
 
 		// if we're on easy mode, then just use the alphabet
-		if (difficulty === Difficulty.Easy) {
-			this.wordManager.shouldUseWords(false);
-		}
+		this.wordManager.shouldUseWords(difficulty !== Difficulty.EASY);
 	}
 
 	public preload() {
 		window.addEventListener("keydown", (event) => {
 			if (event.keyCode == 8) {
 				event.preventDefault();
-				if (this.scoreText.text.length > 0) {
-					this.scoreText.text = this.scoreText.text.substring(0, this.scoreText.text.length - 1);
+				if (this.inputText.text.length > 0) {
+					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 				}
 			}
 		}, false);
@@ -324,7 +337,7 @@ class Game extends Phaser.State {
 		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
 		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
-		this.player = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
 		this.player.health = 3;
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
@@ -337,7 +350,9 @@ class Game extends Phaser.State {
 		this.enemies.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '24px', fill: '#ffffff' });
+		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
+		this.inputText.anchor.setTo(0.5, 0.5);
 
 		this.buttons = this.game.add.group();
 		this.buttons.enableBody = true;
@@ -352,7 +367,7 @@ class Game extends Phaser.State {
 	}
 
 	private append(char) {
-		this.scoreText.text = this.scoreText.text + char;
+		this.inputText.text = this.inputText.text + char;
 	}
 
 	private createKeys() {
@@ -402,7 +417,7 @@ class Game extends Phaser.State {
 
 	private intercept(character): boolean {
 		// only intercept if no word is being processed
-		if (this.scoreText.text.trim().length > 0) {
+		if (this.inputText.text.trim().length > 0) {
 			return false;
 		}
 
@@ -416,15 +431,17 @@ class Game extends Phaser.State {
 						}
 					}
 
-					this.scoreText.text = "";
+					this.inputText.text = "";
 					let bullet = this.bullets.getFirstExists(false);
 
 					if (bullet) {
+						this.player.angle = 0;
+						bullet.angle = 0;
 						this.fire.play();
 						bullet.scale.setTo(0.5, 0.5);
 						bullet.reset(this.player.x - 2, this.player.y - 12);
-						bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x;
-						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
+						bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x * 3;
+						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y * 3;
 						let index = this.bullets.getChildIndex(bullet);
 						this.targets[index] = this.enemyBullets[i];
 						this.enemyLetters[i].fill = "#ff8888";
@@ -438,7 +455,7 @@ class Game extends Phaser.State {
 
 	private typed(character) {
 		return () => {
-			if (this.difficulty === Difficulty.Easy) {
+			if (this.difficulty === Difficulty.EASY) {
 				// on Easy mode, process all characters immediately
 				let word = this.wordManager.completed(character);
 				if (word !== null) {
@@ -455,14 +472,14 @@ class Game extends Phaser.State {
 					return;
 				}
 
-				this.scoreText.text = this.scoreText.text + character;
-				let word = this.wordManager.completed(this.scoreText.text);
+				this.inputText.text = this.inputText.text + character;
+				let word = this.wordManager.completed(this.inputText.text);
 				if (word !== null) {
 					for (let i = 0; i < this.words.length; i++) {
 						if (this.words[i] !== null && this.words[i].text === word) {
 							this.words[i].fill = "#ff8888";
 							this.fireBullet(this.sprites[i]);
-							this.scoreText.text = "";
+							this.inputText.text = "";
 							break;
 						}
 					}
@@ -517,12 +534,13 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (!this.finished && this.game.time.time - this.gameTime > 2000) {
+		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+			this.waitTime = 5000;
 			this.gameTime = this.game.time.time;
 			
 			let word = this.wordManager.getNextWord();
 			if (word === null) {
-				if (this.difficulty !== Difficulty.Easy && this.wordManager.goToNextSet()) {
+				if (this.difficulty !== Difficulty.EASY && this.wordManager.goToNextSet()) {
 					word = this.wordManager.getNextWord();
 					this.wordCount = 0;
 				} else {
@@ -564,18 +582,19 @@ class Game extends Phaser.State {
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
+		this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this)
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
-		if (this.difficulty !== Difficulty.Hard) {
+		if (this.difficulty !== Difficulty.HARD) {
 			return null;
 		}
 
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
-		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
-		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
+		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
+		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 8;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
@@ -599,7 +618,7 @@ class Game extends Phaser.State {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
-		enemy.body.velocity.y = 50;
+		enemy.body.velocity.y = 15;
 
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
@@ -607,13 +626,13 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = Math.random() * 2000 + this.game.time.time;
+		this.enemyBulletTimes[this.wordCount] = 3000 + (Math.random() * 2000) + this.game.time.time;
 		this.wordCount++;
 	}
 
 	private destroy(sprite, bullet) {
 		let index = this.bullets.getChildIndex(bullet);
-		for (var i = 0; i < this.sprites.length; i++) {
+		for (let i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
 				this.sprites[i].kill();
 				this.words[i].kill();
@@ -623,7 +642,24 @@ class Game extends Phaser.State {
 				this.words[i] = null;
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
-				break;
+
+				this.score++;
+				this.scoreText.text = "Score: " + this.score;
+
+				for (let j = 0; j < this.sprites.length; j++) {
+					if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
+						// another enemy already on the screen, set spawn time at five seconds
+						this.waitTime = 5000;
+						return;
+					}
+				}
+
+				if (this.game.time.time - this.gameTime < 4000) {
+					// no enemies on the screen and there's still a
+					// long delay, spawn another one in one second
+					this.waitTime = 1000;
+					this.gameTime = this.game.time.time;
+				}
 			}
 		}
 	}
@@ -638,7 +674,30 @@ class Game extends Phaser.State {
 				this.enemyLetters[i] = null;
 				this.targets[index] = null;
 				bullet.kill();
+
+				this.score++;
+				this.scoreText.text = "Score: " + this.score;
 			}
+		}
+	}
+
+	/**
+	 * Kills the given enemy sprite in addition to removing any other
+	 * retained information about this enemy.
+	 * 
+	 * @param enemy the enemy to kill
+	 */
+	private kill(enemy: Phaser.Sprite) {
+		let index = this.sprites.indexOf(enemy);
+		// the enemy might have already been killed if it collided
+		// with two keyboard buttons
+		if (index !== -1) {
+			this.wordManager.remove(this.words[index].text);
+			this.sprites[index].kill();
+			this.words[index].kill();
+			this.sprites[index] = null;
+			this.words[index] = null;
+			this.targets[index] = null;
 		}
 	}
 
@@ -647,14 +706,7 @@ class Game extends Phaser.State {
 		if (player.health === 0) {
 			this.game.state.start('gameover');
 		}
-		
-		let index = this.sprites.indexOf(enemy);
-		this.wordManager.remove(this.words[index].text);
-		this.sprites[index].kill();
-		this.words[index].kill();
-		this.sprites[index] = null;
-		this.words[index] = null;
-		this.targets[index] = null;
+		this.kill(enemy);
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
@@ -670,14 +722,29 @@ class Game extends Phaser.State {
 		this.enemyLetters[index] = null;
 		this.targets[index] = null;
 	}
+
+	/**
+	 * Callback function for when an enemy collides with the virtual
+	 * keyboard.
+	 * 
+	 * @param enemy the enemy sprite model
+	 * @param button the keyboard button sprite model
+	 */
+	private buttonsCollided(enemy: Phaser.Sprite, button: Phaser.Sprite) {
+		this.kill(enemy);
+	}
 	
 	private fireBullet(enemy: Phaser.Sprite) {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
 		let bullet = this.bullets.getFirstExists(false);
 		let index = this.bullets.getChildIndex(bullet);
+		let rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, enemy.body.x, enemy.body.y);
+		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
 		if (bullet) {
 			this.fire.play();
+			this.player.angle = rotate;
+			bullet.angle = rotate;
 			bullet.scale.setTo(0.5, 0.5);
 			bullet.reset(this.player.x - 2, this.player.y - 12);
 			bullet.body.velocity.x = diff;
@@ -787,12 +854,14 @@ class WordManager {
 	public shouldUseWords(useWords: boolean) {
 		this.useWords = useWords;
 
-		if (!useWords) {
+		if (useWords) {
+			this.english = this.englishWords[this.set];
+		} else {
 			this.english = this.alphabet;
-			this.done = [];
-			for (let i = 0; i < this.english.length; i++) {
-				this.done[i] = false;
-			}
+		}
+		this.done = [];
+		for (let i = 0; i < this.english.length; i++) {
+			this.done[i] = false;
 		}
 	}
 
@@ -816,13 +885,22 @@ class WordManager {
 	}
 
 	/**
-	 * Removes the given translation from the manager.
+	 * Removes the given key and associated word from the manager.
+	 * 
+	 * @param key the key and its associated word to remove
 	 */
-	public remove(translation: string): void {
-		let index = this.pendingTranslation.indexOf(translation);
-		if (index !== -1) {
-			this.pendingTranslation.splice(index, 1);
-			this.pending.splice(index, 1);
+	public remove(key: string): void {
+		if (this.useWords) {
+			let index = this.pendingTranslation.indexOf(key);
+			if (index !== -1) {
+				this.pendingTranslation.splice(index, 1);
+				this.pending.splice(index, 1);
+			}
+		} else {
+			let index = this.pending.indexOf(key);
+			if (index !== -1) {
+				this.pending.splice(index, 1);
+			}
 		}
 	}
 
