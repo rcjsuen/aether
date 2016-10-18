@@ -55,9 +55,9 @@ var TitleScreen = (function (_super) {
         this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether", { fontSize: '64px', fill: '#ffffff' });
         this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.titleText.anchor.setTo(0.5, 0.5);
-        this.easyText = this.createText("Easy", 300, Difficulty.Easy);
-        this.normalText = this.createText("Normal", 350, Difficulty.Normal);
-        this.hardText = this.createText("Hard", 400, Difficulty.Hard);
+        this.easyText = this.createText("Easy", 300, Difficulty.EASY);
+        this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
+        this.hardText = this.createText("Hard", 400, Difficulty.HARD);
         this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
         this.ship.scale.setTo(0.5, 0.5);
         this.ship.anchor.setTo(0.5);
@@ -105,9 +105,9 @@ var TitleScreen = (function (_super) {
 }(Phaser.State));
 var Difficulty;
 (function (Difficulty) {
-    Difficulty[Difficulty["Easy"] = 0] = "Easy";
-    Difficulty[Difficulty["Normal"] = 1] = "Normal";
-    Difficulty[Difficulty["Hard"] = 2] = "Hard";
+    Difficulty[Difficulty["EASY"] = 0] = "EASY";
+    Difficulty[Difficulty["NORMAL"] = 1] = "NORMAL";
+    Difficulty[Difficulty["HARD"] = 2] = "HARD";
 })(Difficulty || (Difficulty = {}));
 var Game = (function (_super) {
     __extends(Game, _super);
@@ -169,6 +169,8 @@ var Game = (function (_super) {
             'y',
             'z',
         ];
+        this.waitTime = 5000;
+        this.score = 0;
         this.player = null;
         this.wordCount = 0;
         this.words = [];
@@ -210,17 +212,15 @@ var Game = (function (_super) {
             this.wordManager.reset();
         }
         this.difficulty = difficulty;
-        if (difficulty === Difficulty.Easy) {
-            this.wordManager.shouldUseWords(false);
-        }
+        this.wordManager.shouldUseWords(difficulty !== Difficulty.EASY);
     };
     Game.prototype.preload = function () {
         var _this = this;
         window.addEventListener("keydown", function (event) {
             if (event.keyCode == 8) {
                 event.preventDefault();
-                if (_this.scoreText.text.length > 0) {
-                    _this.scoreText.text = _this.scoreText.text.substring(0, _this.scoreText.text.length - 1);
+                if (_this.inputText.text.length > 0) {
+                    _this.inputText.text = _this.inputText.text.substring(0, _this.inputText.text.length - 1);
                 }
             }
         }, false);
@@ -236,7 +236,7 @@ var Game = (function (_super) {
         this.enemyBulletsGroup.createMultiple(32, 'sheet', 'PNG/Lasers/laserGreen13.png', false);
         this.enemyBulletsGroup.setAll('checkWorldBounds', true);
         this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
-        this.player = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+        this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
         this.player.health = 3;
         this.player.scale.setTo(0.5, 0.5);
         this.player.anchor.setTo(0.5);
@@ -246,7 +246,9 @@ var Game = (function (_super) {
         this.enemies = this.game.add.group();
         this.enemies.enableBody = true;
         this.wordsGroup = this.game.add.group();
-        this.scoreText = this.game.add.text(16, 16, null, { fontSize: '32px', fill: '#ffffff' });
+        this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '24px', fill: '#ffffff' });
+        this.inputText = this.game.add.text(this.game.width / 2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
+        this.inputText.anchor.setTo(0.5, 0.5);
         this.buttons = this.game.add.group();
         this.buttons.enableBody = true;
         this.createKeys();
@@ -258,7 +260,7 @@ var Game = (function (_super) {
         }
     };
     Game.prototype.append = function (char) {
-        this.scoreText.text = this.scoreText.text + char;
+        this.inputText.text = this.inputText.text + char;
     };
     Game.prototype.createKeys = function () {
         var scaling = 0.45;
@@ -300,7 +302,7 @@ var Game = (function (_super) {
         }, this);
     };
     Game.prototype.intercept = function (character) {
-        if (this.scoreText.text.trim().length > 0) {
+        if (this.inputText.text.trim().length > 0) {
             return false;
         }
         for (var i = 0; i < this.enemyLetters.length; i++) {
@@ -311,14 +313,16 @@ var Game = (function (_super) {
                             return false;
                         }
                     }
-                    this.scoreText.text = "";
+                    this.inputText.text = "";
                     var bullet = this.bullets.getFirstExists(false);
                     if (bullet) {
+                        this.player.angle = 0;
+                        bullet.angle = 0;
                         this.fire.play();
                         bullet.scale.setTo(0.5, 0.5);
                         bullet.reset(this.player.x - 2, this.player.y - 12);
-                        bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x;
-                        bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y;
+                        bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x * 3;
+                        bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y * 3;
                         var index = this.bullets.getChildIndex(bullet);
                         this.targets[index] = this.enemyBullets[i];
                         this.enemyLetters[i].fill = "#ff8888";
@@ -332,7 +336,7 @@ var Game = (function (_super) {
     Game.prototype.typed = function (character) {
         var _this = this;
         return function () {
-            if (_this.difficulty === Difficulty.Easy) {
+            if (_this.difficulty === Difficulty.EASY) {
                 var word = _this.wordManager.completed(character);
                 if (word !== null) {
                     for (var i = 0; i < _this.words.length; i++) {
@@ -348,14 +352,14 @@ var Game = (function (_super) {
                 if (_this.intercept(character)) {
                     return;
                 }
-                _this.scoreText.text = _this.scoreText.text + character;
-                var word = _this.wordManager.completed(_this.scoreText.text);
+                _this.inputText.text = _this.inputText.text + character;
+                var word = _this.wordManager.completed(_this.inputText.text);
                 if (word !== null) {
                     for (var i = 0; i < _this.words.length; i++) {
                         if (_this.words[i] !== null && _this.words[i].text === word) {
                             _this.words[i].fill = "#ff8888";
                             _this.fireBullet(_this.sprites[i]);
-                            _this.scoreText.text = "";
+                            _this.inputText.text = "";
                             break;
                         }
                     }
@@ -402,11 +406,12 @@ var Game = (function (_super) {
                 this.enemyLetters[i] = null;
             }
         }
-        if (!this.finished && this.game.time.time - this.gameTime > 2000) {
+        if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+            this.waitTime = 5000;
             this.gameTime = this.game.time.time;
             var word = this.wordManager.getNextWord();
             if (word === null) {
-                if (this.difficulty !== Difficulty.Easy && this.wordManager.goToNextSet()) {
+                if (this.difficulty !== Difficulty.EASY && this.wordManager.goToNextSet()) {
                     word = this.wordManager.getNextWord();
                     this.wordCount = 0;
                 }
@@ -443,15 +448,16 @@ var Game = (function (_super) {
         this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
         this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
         this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
+        this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this);
     };
     Game.prototype.fireEnemyBullet = function (attackingEnemy, letterIndex) {
-        if (this.difficulty !== Difficulty.Hard) {
+        if (this.difficulty !== Difficulty.HARD) {
             return null;
         }
         var rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
         rotate = Phaser.Math.radToDeg(rotate) + 90;
-        var diffX = -(attackingEnemy.body.x - this.player.body.x) / 4;
-        var diffY = -(attackingEnemy.body.y - this.player.body.y) / 4;
+        var diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
+        var diffY = -(attackingEnemy.body.y - this.player.body.y) / 8;
         var enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
         if (enemyBullet) {
             this.fire.play();
@@ -472,13 +478,13 @@ var Game = (function (_super) {
         var x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
         var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
         enemy.scale.setTo(0.5, 0.5);
-        enemy.body.velocity.y = 50;
+        enemy.body.velocity.y = 15;
         this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
         this.words[this.wordCount].anchor.set(0.5);
         this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.wordsGroup.add(this.words[this.wordCount]);
         this.sprites[this.wordCount] = enemy;
-        this.enemyBulletTimes[this.wordCount] = Math.random() * 2000 + this.game.time.time;
+        this.enemyBulletTimes[this.wordCount] = 3000 + (Math.random() * 2000) + this.game.time.time;
         this.wordCount++;
     };
     Game.prototype.destroy = function (sprite, bullet) {
@@ -492,7 +498,18 @@ var Game = (function (_super) {
                 this.words[i] = null;
                 this.targets[index] = null;
                 this.enemyBulletTimes[i] = null;
-                break;
+                this.score++;
+                this.scoreText.text = "Score: " + this.score;
+                for (var j = 0; j < this.sprites.length; j++) {
+                    if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
+                        this.waitTime = 5000;
+                        return;
+                    }
+                }
+                if (this.game.time.time - this.gameTime < 4000) {
+                    this.waitTime = 1000;
+                    this.gameTime = this.game.time.time;
+                }
             }
         }
     };
@@ -506,7 +523,20 @@ var Game = (function (_super) {
                 this.enemyLetters[i] = null;
                 this.targets[index] = null;
                 bullet.kill();
+                this.score++;
+                this.scoreText.text = "Score: " + this.score;
             }
+        }
+    };
+    Game.prototype.kill = function (enemy) {
+        var index = this.sprites.indexOf(enemy);
+        if (index !== -1) {
+            this.wordManager.remove(this.words[index].text);
+            this.sprites[index].kill();
+            this.words[index].kill();
+            this.sprites[index] = null;
+            this.words[index] = null;
+            this.targets[index] = null;
         }
     };
     Game.prototype.damageShip = function (player, enemy) {
@@ -514,13 +544,7 @@ var Game = (function (_super) {
         if (player.health === 0) {
             this.game.state.start('gameover');
         }
-        var index = this.sprites.indexOf(enemy);
-        this.wordManager.remove(this.words[index].text);
-        this.sprites[index].kill();
-        this.words[index].kill();
-        this.sprites[index] = null;
-        this.words[index] = null;
-        this.targets[index] = null;
+        this.kill(enemy);
     };
     Game.prototype.damage = function (player, enemyBullet) {
         player.damage(1);
@@ -534,12 +558,19 @@ var Game = (function (_super) {
         this.enemyLetters[index] = null;
         this.targets[index] = null;
     };
+    Game.prototype.buttonsCollided = function (enemy, button) {
+        this.kill(enemy);
+    };
     Game.prototype.fireBullet = function (enemy) {
         var diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
         var bullet = this.bullets.getFirstExists(false);
         var index = this.bullets.getChildIndex(bullet);
+        var rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, enemy.body.x, enemy.body.y);
+        rotate = Phaser.Math.radToDeg(rotate) + 90;
         if (bullet) {
             this.fire.play();
+            this.player.angle = rotate;
+            bullet.angle = rotate;
             bullet.scale.setTo(0.5, 0.5);
             bullet.reset(this.player.x - 2, this.player.y - 12);
             bullet.body.velocity.x = diff;
@@ -622,12 +653,15 @@ var WordManager = (function () {
     };
     WordManager.prototype.shouldUseWords = function (useWords) {
         this.useWords = useWords;
-        if (!useWords) {
+        if (useWords) {
+            this.english = this.englishWords[this.set];
+        }
+        else {
             this.english = this.alphabet;
-            this.done = [];
-            for (var i = 0; i < this.english.length; i++) {
-                this.done[i] = false;
-            }
+        }
+        this.done = [];
+        for (var i = 0; i < this.english.length; i++) {
+            this.done[i] = false;
         }
     };
     WordManager.prototype.completed = function (word) {
@@ -638,11 +672,19 @@ var WordManager = (function () {
         this.pending.splice(index, 1);
         return this.useWords ? this.pendingTranslation.splice(index, 1)[0] : word;
     };
-    WordManager.prototype.remove = function (translation) {
-        var index = this.pendingTranslation.indexOf(translation);
-        if (index !== -1) {
-            this.pendingTranslation.splice(index, 1);
-            this.pending.splice(index, 1);
+    WordManager.prototype.remove = function (key) {
+        if (this.useWords) {
+            var index = this.pendingTranslation.indexOf(key);
+            if (index !== -1) {
+                this.pendingTranslation.splice(index, 1);
+                this.pending.splice(index, 1);
+            }
+        }
+        else {
+            var index = this.pending.indexOf(key);
+            if (index !== -1) {
+                this.pending.splice(index, 1);
+            }
         }
     };
     WordManager.prototype.goToNextSet = function () {
