@@ -164,6 +164,22 @@ enum Difficulty {
 	HARD
 }
 
+/**
+ * The base speed in which the enemy should move at.
+ */
+const ENEMY_MOVE_SPEED = 10;
+
+/**
+ * The base speed in which an enemy's bullet should move at.
+ */
+const ENEMY_BULLET_MOVE_SPEED = 40;
+
+/**
+ * The speed factor that should be used for scaling an enemy and an
+ * enemy's bullet's speed based on the level the user is currently on.
+ */
+const ENEMY_MOVE_SPEED_FACTOR = 5;
+
 class Game extends Phaser.State {
 	
 	private phaserKeys = [
@@ -260,9 +276,9 @@ class Game extends Phaser.State {
 	private targets: Phaser.Sprite[] = [];
 
 	/**
-	 * The wave that the user is currently on.
+	 * The level that the user is currently on.
 	 */
-	private wave: number = 1;
+	private level: number = 1;
 
 	private difficulty: Difficulty;
 
@@ -295,7 +311,7 @@ class Game extends Phaser.State {
 			this.player.kill();
 
 			this.wordCount = 0;
-			this.wave = 0;
+			this.level = 0;
 			this.finished = false;
 			this.words = [];
 			this.sprites = [];
@@ -539,18 +555,25 @@ class Game extends Phaser.State {
 			this.gameTime = this.game.time.time;
 			
 			let word = this.wordManager.getNextWord();
+			// no words left, move to the next set
 			if (word === null) {
-				if (this.difficulty !== Difficulty.EASY && this.wordManager.goToNextSet()) {
-					word = this.wordManager.getNextWord();
+				if (this.difficulty === Difficulty.EASY || !this.wordManager.goToNextSet()) {
+					// can't move forward anymore, go to the next level
+					this.level++;
 					this.wordCount = 0;
-				} else {
-					this.finished = true;
+					if (this.level === 6) {
+						// end the game after five levels
+						this.finished = true;
+					} else {
+						this.wordManager.reset();
+						this.wordManager.shouldUseWords(this.difficulty !== Difficulty.EASY);
+					}
 				}
-				this.wave++;
+				word = this.wordManager.getNextWord();
 			}
 
 			if (!this.finished) {
-				// game isn't finished, create an enemy from the next wave
+				// game isn't finished, create an enemy
 				this.createEnemy(word);
 			}
 		}
@@ -594,7 +617,6 @@ class Game extends Phaser.State {
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
 		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
-		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 8;
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
@@ -603,7 +625,7 @@ class Game extends Phaser.State {
 			enemyBullet.scale.setTo(0.5, 0.5);
 			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
 			enemyBullet.body.velocity.x = diffX;
-			enemyBullet.body.velocity.y = diffY;
+			enemyBullet.body.velocity.y = ENEMY_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
 
 			var index = Math.floor(Math.random() * 26);
 			var letter = this.game.add.text(0, 0, this.keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
@@ -618,7 +640,7 @@ class Game extends Phaser.State {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
-		enemy.body.velocity.y = 15;
+		enemy.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
 
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
