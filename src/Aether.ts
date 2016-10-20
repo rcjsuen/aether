@@ -253,6 +253,11 @@ class Game extends Phaser.State {
 	private score: number = 0;
 
 	/**
+	 * The background sprite that is tiled and moving.
+	 */
+	private background: Phaser.TileSprite;
+
+	/**
 	 * The text field where the user's input will be displayed with.
 	 */
 	private inputText: Phaser.Text;
@@ -360,8 +365,8 @@ class Game extends Phaser.State {
 	}
 
 	public create() {
-		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.autoScroll(0, 50);
 
 		this.bullets = this.game.add.physicsGroup();
 		this.bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
@@ -631,6 +636,9 @@ class Game extends Phaser.State {
 			// stop moving the new ship
 			this.player.body.velocity.y = 0;
 			this.player.body.y = 415;
+			// scroll the background again now that the ship is in
+			// position
+			this.background.autoScroll(0, 50);
 			// start respawning enemies
 			this.haltEnemySpawns = false;
 			this.gameTime = this.game.time.time;
@@ -768,6 +776,7 @@ class Game extends Phaser.State {
 	private decreaseHealth() {
 		if (this.player.health === 1) {
 			this.haltEnemySpawns = true;
+			this.background.autoScroll(0, 0);
 
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
