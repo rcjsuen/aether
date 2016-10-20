@@ -529,7 +529,7 @@ class Game extends Phaser.State {
 			if (cleared) {
 				// all the enemies and lasers have been destroyed,
 				// the game is over
-				this.game.state.start('gameover');
+				this.endGame();
 				return;
 			}
 		}
@@ -738,7 +738,7 @@ class Game extends Phaser.State {
 	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
 		player.damage(1);
 		if (player.health === 0) {
-			this.game.state.start('gameover');
+			this.endGame();
 		}
 		this.kill(enemy);
 	}
@@ -746,7 +746,7 @@ class Game extends Phaser.State {
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
 		player.damage(1);
 		if (player.health === 0) {
-			this.game.state.start('gameover');
+			this.endGame();
 		}
 		
 		let index = this.enemyBullets.indexOf(enemyBullet);
@@ -787,9 +787,39 @@ class Game extends Phaser.State {
 		}
 	}
 
+	private endGame(): void {
+		this.game.state.start('gameover', true, false, this.score);
+	}
+
 }
 
 class GameOver extends Phaser.State {
+
+	/**
+	 * The text field to display the user's score.
+	 */
+	private scoreText: Phaser.Text;
+
+	/**
+	 * The user's score.
+	 */
+	private score: number;
+
+	/**
+	 * The current number that is being displayed to the user.
+	 */
+	private current: number = 0;
+
+	/**
+	 * The amount that should be onto the current number before
+	 * stopping at the user's final score.
+	 */
+	private increment: number;
+
+	public init(score: number) {
+		this.score = score;
+		this.increment = this.score / 100;
+	}
 
 	public create(): void {
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
@@ -798,6 +828,10 @@ class GameOver extends Phaser.State {
 		let gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over",  { fontSize: '64px', fill: '#ffffff' });
 		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		gameOverText.anchor.setTo(0.5, 0.5);
+
+		this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Score: 0",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		this.scoreText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.scoreText.anchor.setTo(0.5, 0.5);
 
 		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
 		titleText.inputEnabled = true;
@@ -812,6 +846,19 @@ class GameOver extends Phaser.State {
 		titleText.events.onInputDown.add(() => {
 			this.game.state.start('title');
 		});
+	}
+
+	public update(): void {
+		if (this.current !== this.score) {
+			// increment the score
+			this.current = this.current + this.increment;
+			if (this.current > this.score) {
+				// set the score definitely due to decimals
+				this.current = this.score;
+			}
+			// don't show decimals to the user
+			this.scoreText.text = "Score: " + Math.floor(this.current);
+		}
 	}
 }
 
