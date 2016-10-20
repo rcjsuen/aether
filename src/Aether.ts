@@ -338,7 +338,6 @@ class Game extends Phaser.State {
 
 	public preload() {
 		this.backspaceListener = (event) => {
-			console.log("a");
 			if (event.keyCode == 8) {
 				event.preventDefault();
 				if (this.inputText.text.length > 0) {
