@@ -485,11 +485,13 @@ class Game extends Phaser.State {
 					}
 				}
 			} else {
-				if (this.intercept(character)) {
+				let prefix = this.inputText.text + character;
+				if ((prefix.length === 1 && this.intercept(character)) ||
+						!this.wordManager.isValidPrefix(prefix)) {
 					return;
 				}
 
-				this.inputText.text = this.inputText.text + character;
+				this.inputText.text = prefix;
 				let word = this.wordManager.completed(this.inputText.text);
 				if (word !== null) {
 					for (let i = 0; i < this.words.length; i++) {
@@ -895,6 +897,26 @@ class WordManager {
 		for (let i = 0; i < this.english.length; i++) {
 			this.done[i] = false;
 		}
+	}
+
+	/**
+	 * Checks whether the given string is a valid prefix of a pending
+	 * word.
+	 * 
+	 * @param prefix the string the check
+	 * @return <tt>true</tt> if the string is a prefix of a pending
+	 * word, <tt>false</tt> otherwise
+	 */
+	public isValidPrefix(prefix: string): boolean {
+		let valid = false;
+		let length = prefix.length;
+		for (let i = 0; i < this.pending.length; i++) {
+			if (this.pending[i].substr(0, length) === prefix) {
+				valid = true;
+				break;
+			}
+		}
+		return valid;
 	}
 
 	/**
