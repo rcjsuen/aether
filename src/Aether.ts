@@ -312,6 +312,7 @@ class Game extends Phaser.State {
 
 			this.wordCount = 0;
 			this.level = 0;
+			this.score = 0;
 			this.finished = false;
 			this.words = [];
 			this.sprites = [];
