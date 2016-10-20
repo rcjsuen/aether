@@ -649,7 +649,7 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = 3000 + (Math.random() * 2000) + this.game.time.time;
+		this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
 		this.wordCount++;
 	}
 
