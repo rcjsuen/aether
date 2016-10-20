@@ -821,8 +821,8 @@ class GameOver extends Phaser.State {
 	private current: number = 0;
 
 	/**
-	 * The amount that should be onto the current number before
-	 * stopping at the user's final score.
+	 * The amount that should be used to increment the rendered score
+	 * before stopping at the user's final score.
 	 */
 	private increment: number;
 
@@ -899,6 +899,10 @@ class WordManager {
 	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
 	private set: number;
 
+	/**
+	 * An array that corresponds to the words that have already been
+	 * processed.
+	 */
 	private done: boolean[] = [];
 
 	private english: string[];
@@ -907,6 +911,10 @@ class WordManager {
 	private pending: string[] = [];
 	private pendingTranslation: string[] = [];
 
+	/**
+	 * Whether words should be used or just the characters from the
+	 * English alphabet.
+	 */
 	private useWords: boolean = true;
 
 	private alphabet: string[] = [
