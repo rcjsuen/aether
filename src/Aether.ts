@@ -164,6 +164,22 @@ enum Difficulty {
 	HARD
 }
 
+/**
+ * The base speed in which the enemy should move at.
+ */
+const ENEMY_MOVE_SPEED = 10;
+
+/**
+ * The base speed in which an enemy's bullet should move at.
+ */
+const ENEMY_BULLET_MOVE_SPEED = 40;
+
+/**
+ * The speed factor that should be used for scaling an enemy and an
+ * enemy's bullet's speed based on the level the user is currently on.
+ */
+const ENEMY_MOVE_SPEED_FACTOR = 5;
+
 class Game extends Phaser.State {
 	
 	private phaserKeys = [
@@ -260,9 +276,9 @@ class Game extends Phaser.State {
 	private targets: Phaser.Sprite[] = [];
 
 	/**
-	 * The wave that the user is currently on.
+	 * The level that the user is currently on.
 	 */
-	private wave: number = 1;
+	private level: number = 1;
 
 	private difficulty: Difficulty;
 
@@ -272,6 +288,13 @@ class Game extends Phaser.State {
 	private finished: boolean = false;
 
 	private wordManager: WordManager;
+
+	/**
+	 * The listener to prevent the 'Backspace' key from moving back in
+	 * the browser's history. The key should instead be used for
+	 * removing the user's input into the game.9
+	 */
+	private backspaceListener;
 
 	public init(difficulty: Difficulty) {
 		this.wordManager = (this.game as Aether).getWordManager();
@@ -295,7 +318,8 @@ class Game extends Phaser.State {
 			this.player.kill();
 
 			this.wordCount = 0;
-			this.wave = 0;
+			this.level = 0;
+			this.score = 0;
 			this.finished = false;
 			this.words = [];
 			this.sprites = [];
@@ -313,14 +337,15 @@ class Game extends Phaser.State {
 	}
 
 	public preload() {
-		window.addEventListener("keydown", (event) => {
+		this.backspaceListener = (event) => {
 			if (event.keyCode == 8) {
 				event.preventDefault();
 				if (this.inputText.text.length > 0) {
 					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 				}
 			}
-		}, false);
+		};
+		window.addEventListener("keydown", this.backspaceListener, false);
 	}
 
 	public create() {
@@ -350,7 +375,7 @@ class Game extends Phaser.State {
 		this.enemies.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '24px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
 		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
 		this.inputText.anchor.setTo(0.5, 0.5);
 
@@ -409,8 +434,8 @@ class Game extends Phaser.State {
 		backspaceButton.scale.setTo(scaling, scalingY);
 		backspaceButton.inputEnabled = true;
 		backspaceButton.events.onInputDown.add(function() {
-			if (this.scoreText.text.length > 0) {
-				this.scoreText.text = this.scoreText.text.substring(0, this.scoreText.text.length - 1);
+			if (this.inputText.text.length > 0) {
+				this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 			}
 		}, this);
 	}
@@ -468,11 +493,13 @@ class Game extends Phaser.State {
 					}
 				}
 			} else {
-				if (this.intercept(character)) {
+				let prefix = this.inputText.text + character;
+				if ((prefix.length === 1 && this.intercept(character)) ||
+						!this.wordManager.isValidPrefix(prefix)) {
 					return;
 				}
 
-				this.inputText.text = this.inputText.text + character;
+				this.inputText.text = prefix;
 				let word = this.wordManager.completed(this.inputText.text);
 				if (word !== null) {
 					for (let i = 0; i < this.words.length; i++) {
@@ -510,7 +537,7 @@ class Game extends Phaser.State {
 			if (cleared) {
 				// all the enemies and lasers have been destroyed,
 				// the game is over
-				this.game.state.start('gameover');
+				this.endGame();
 				return;
 			}
 		}
@@ -539,18 +566,25 @@ class Game extends Phaser.State {
 			this.gameTime = this.game.time.time;
 			
 			let word = this.wordManager.getNextWord();
+			// no words left, move to the next set
 			if (word === null) {
-				if (this.difficulty !== Difficulty.EASY && this.wordManager.goToNextSet()) {
-					word = this.wordManager.getNextWord();
+				if (this.difficulty === Difficulty.EASY || !this.wordManager.goToNextSet()) {
+					// can't move forward anymore, go to the next level
+					this.level++;
 					this.wordCount = 0;
-				} else {
-					this.finished = true;
+					if (this.level === 6) {
+						// end the game after five levels
+						this.finished = true;
+					} else {
+						this.wordManager.reset();
+						this.wordManager.shouldUseWords(this.difficulty !== Difficulty.EASY);
+					}
 				}
-				this.wave++;
+				word = this.wordManager.getNextWord();
 			}
 
 			if (!this.finished) {
-				// game isn't finished, create an enemy from the next wave
+				// game isn't finished, create an enemy
 				this.createEnemy(word);
 			}
 		}
@@ -567,7 +601,7 @@ class Game extends Phaser.State {
 		for (var i = 0; i < this.words.length; i++) {
 			if (this.words[i] !== null && this.words[i] !== undefined) {
 				this.words[i].x = this.sprites[i].x;
-				this.words[i].y = this.sprites[i].y - 25;
+				this.words[i].y = this.sprites[i].y + 60;
 			}
 		}
 
@@ -593,8 +627,7 @@ class Game extends Phaser.State {
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
-		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
-		let diffY = -(attackingEnemy.body.y - this.player.body.y) / 8;
+		let slope = (this.player.body.y - attackingEnemy.body.y) / (this.player.body.x - attackingEnemy.body.x);
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
@@ -602,8 +635,8 @@ class Game extends Phaser.State {
 			enemyBullet.angle = rotate;
 			enemyBullet.scale.setTo(0.5, 0.5);
 			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
-			enemyBullet.body.velocity.x = diffX;
-			enemyBullet.body.velocity.y = diffY;
+			enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
+			enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope; 
 
 			var index = Math.floor(Math.random() * 26);
 			var letter = this.game.add.text(0, 0, this.keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
@@ -618,7 +651,7 @@ class Game extends Phaser.State {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
-		enemy.body.velocity.y = 15;
+		enemy.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
 
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
@@ -626,8 +659,19 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = 3000 + (Math.random() * 2000) + this.game.time.time;
+		this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
 		this.wordCount++;
+	}
+
+	/**
+	 * Add the given value to the current score.
+	 * 
+	 * @param increment the amount to add to the current total score,
+	 * must be a positive number
+	 */
+	private updateScore(increment: number) {
+		this.score += increment;
+		this.scoreText.text = "Score: " + this.score;
 	}
 
 	private destroy(sprite, bullet) {
@@ -643,8 +687,7 @@ class Game extends Phaser.State {
 				this.targets[index] = null;
 				this.enemyBulletTimes[i] = null;
 
-				this.score++;
-				this.scoreText.text = "Score: " + this.score;
+				this.updateScore(1);
 
 				for (let j = 0; j < this.sprites.length; j++) {
 					if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
@@ -675,8 +718,7 @@ class Game extends Phaser.State {
 				this.targets[index] = null;
 				bullet.kill();
 
-				this.score++;
-				this.scoreText.text = "Score: " + this.score;
+				this.updateScore(1);
 			}
 		}
 	}
@@ -704,7 +746,7 @@ class Game extends Phaser.State {
 	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
 		player.damage(1);
 		if (player.health === 0) {
-			this.game.state.start('gameover');
+			this.endGame();
 		}
 		this.kill(enemy);
 	}
@@ -712,7 +754,7 @@ class Game extends Phaser.State {
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
 		player.damage(1);
 		if (player.health === 0) {
-			this.game.state.start('gameover');
+			this.endGame();
 		}
 		
 		let index = this.enemyBullets.indexOf(enemyBullet);
@@ -753,9 +795,40 @@ class Game extends Phaser.State {
 		}
 	}
 
+	private endGame(): void {
+		window.removeEventListener("keydown", this.backspaceListener, false);
+		this.game.state.start('gameover', true, false, this.score);
+	}
+
 }
 
 class GameOver extends Phaser.State {
+
+	/**
+	 * The text field to display the user's score.
+	 */
+	private scoreText: Phaser.Text;
+
+	/**
+	 * The user's score.
+	 */
+	private score: number;
+
+	/**
+	 * The current number that is being displayed to the user.
+	 */
+	private current: number = 0;
+
+	/**
+	 * The amount that should be used to increment the rendered score
+	 * before stopping at the user's final score.
+	 */
+	private increment: number;
+
+	public init(score: number) {
+		this.score = score;
+		this.increment = this.score / 100;
+	}
 
 	public create(): void {
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
@@ -764,6 +837,10 @@ class GameOver extends Phaser.State {
 		let gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over",  { fontSize: '64px', fill: '#ffffff' });
 		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		gameOverText.anchor.setTo(0.5, 0.5);
+
+		this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Score: 0",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		this.scoreText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.scoreText.anchor.setTo(0.5, 0.5);
 
 		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
 		titleText.inputEnabled = true;
@@ -778,6 +855,19 @@ class GameOver extends Phaser.State {
 		titleText.events.onInputDown.add(() => {
 			this.game.state.start('title');
 		});
+	}
+
+	public update(): void {
+		if (this.current !== this.score) {
+			// increment the score
+			this.current = this.current + this.increment;
+			if (this.current > this.score) {
+				// set the score definitely due to decimals
+				this.current = this.score;
+			}
+			// don't show decimals to the user
+			this.scoreText.text = "Score: " + Math.floor(this.current);
+		}
 	}
 }
 
@@ -808,6 +898,10 @@ class WordManager {
 	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
 	private set: number;
 
+	/**
+	 * An array that corresponds to the words that have already been
+	 * processed.
+	 */
 	private done: boolean[] = [];
 
 	private english: string[];
@@ -816,6 +910,10 @@ class WordManager {
 	private pending: string[] = [];
 	private pendingTranslation: string[] = [];
 
+	/**
+	 * Whether words should be used or just the characters from the
+	 * English alphabet.
+	 */
 	private useWords: boolean = true;
 
 	private alphabet: string[] = [
@@ -863,6 +961,26 @@ class WordManager {
 		for (let i = 0; i < this.english.length; i++) {
 			this.done[i] = false;
 		}
+	}
+
+	/**
+	 * Checks whether the given string is a valid prefix of a pending
+	 * word.
+	 * 
+	 * @param prefix the string the check
+	 * @return <tt>true</tt> if the string is a prefix of a pending
+	 * word, <tt>false</tt> otherwise
+	 */
+	public isValidPrefix(prefix: string): boolean {
+		let valid = false;
+		let length = prefix.length;
+		for (let i = 0; i < this.pending.length; i++) {
+			if (this.pending[i].substr(0, length) === prefix) {
+				valid = true;
+				break;
+			}
+		}
+		return valid;
 	}
 
 	/**
