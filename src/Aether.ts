@@ -289,6 +289,13 @@ class Game extends Phaser.State {
 
 	private wordManager: WordManager;
 
+	/**
+	 * The listener to prevent the 'Backspace' key from moving back in
+	 * the browser's history. The key should instead be used for
+	 * removing the user's input into the game.9
+	 */
+	private backspaceListener;
+
 	public init(difficulty: Difficulty) {
 		this.wordManager = (this.game as Aether).getWordManager();
 		if (this.player !== null) {
@@ -330,14 +337,16 @@ class Game extends Phaser.State {
 	}
 
 	public preload() {
-		window.addEventListener("keydown", (event) => {
+		this.backspaceListener = (event) => {
+			console.log("a");
 			if (event.keyCode == 8) {
 				event.preventDefault();
 				if (this.inputText.text.length > 0) {
 					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
 				}
 			}
-		}, false);
+		};
+		window.addEventListener("keydown", this.backspaceListener, false);
 	}
 
 	public create() {
@@ -788,6 +797,7 @@ class Game extends Phaser.State {
 	}
 
 	private endGame(): void {
+		window.removeEventListener("keydown", this.backspaceListener, false);
 		this.game.state.start('gameover', true, false, this.score);
 	}
 
