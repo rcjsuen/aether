@@ -617,7 +617,7 @@ class Game extends Phaser.State {
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
-		let diffX = -(attackingEnemy.body.x - this.player.body.x) / 8;
+		let slope = (this.player.body.y - attackingEnemy.body.y) / (this.player.body.x - attackingEnemy.body.x);
 		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
 
 		if (enemyBullet) {
@@ -625,8 +625,8 @@ class Game extends Phaser.State {
 			enemyBullet.angle = rotate;
 			enemyBullet.scale.setTo(0.5, 0.5);
 			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
-			enemyBullet.body.velocity.x = diffX;
-			enemyBullet.body.velocity.y = ENEMY_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
+			enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
+			enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope; 
 
 			var index = Math.floor(Math.random() * 26);
 			var letter = this.game.add.text(0, 0, this.keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
