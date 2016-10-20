@@ -591,7 +591,7 @@ class Game extends Phaser.State {
 		for (var i = 0; i < this.words.length; i++) {
 			if (this.words[i] !== null && this.words[i] !== undefined) {
 				this.words[i].x = this.sprites[i].x;
-				this.words[i].y = this.sprites[i].y - 15;
+				this.words[i].y = this.sprites[i].y + 60;
 			}
 		}
 
