@@ -2,7 +2,7 @@
 
 "Backgrounds/purple.png":
 {
-	"frame": {"x":1,"y":1,"w":256,"h":256},
+	"frame": {"x":0,"y":0,"w":256,"h":256},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
@@ -10,223 +10,223 @@
 },
 "keyboard/functions/Keyboard_White_Backspace_Alt.png":
 {
-	"frame": {"x":96,"y":259,"w":94,"h":64},
+	"frame": {"x":256,"y":0,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":3,"y":18,"w":94,"h":64},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_A.png":
 {
-	"frame": {"x":102,"y":325,"w":78,"h":74},
+	"frame": {"x":356,"y":0,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_B.png":
 {
-	"frame": {"x":102,"y":401,"w":78,"h":74},
+	"frame": {"x":0,"y":256,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_C.png":
 {
-	"frame": {"x":182,"y":325,"w":78,"h":74},
+	"frame": {"x":100,"y":256,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_D.png":
 {
-	"frame": {"x":182,"y":401,"w":78,"h":74},
+	"frame": {"x":200,"y":256,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_E.png":
 {
-	"frame": {"x":259,"y":1,"w":78,"h":74},
+	"frame": {"x":300,"y":256,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_F.png":
 {
-	"frame": {"x":259,"y":77,"w":78,"h":74},
+	"frame": {"x":400,"y":256,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_G.png":
 {
-	"frame": {"x":259,"y":153,"w":78,"h":74},
+	"frame": {"x":0,"y":356,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_H.png":
 {
-	"frame": {"x":259,"y":229,"w":78,"h":74},
+	"frame": {"x":100,"y":356,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_I.png":
 {
-	"frame": {"x":262,"y":305,"w":78,"h":74},
+	"frame": {"x":200,"y":356,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_J.png":
 {
-	"frame": {"x":262,"y":381,"w":78,"h":74},
+	"frame": {"x":300,"y":356,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_K.png":
 {
-	"frame": {"x":339,"y":1,"w":78,"h":74},
+	"frame": {"x":400,"y":356,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_L.png":
 {
-	"frame": {"x":339,"y":77,"w":78,"h":74},
+	"frame": {"x":0,"y":456,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_M.png":
 {
-	"frame": {"x":339,"y":153,"w":78,"h":74},
+	"frame": {"x":100,"y":456,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_N.png":
 {
-	"frame": {"x":339,"y":229,"w":78,"h":74},
+	"frame": {"x":200,"y":456,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_O.png":
 {
-	"frame": {"x":342,"y":305,"w":78,"h":74},
+	"frame": {"x":300,"y":456,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_P.png":
 {
-	"frame": {"x":342,"y":381,"w":78,"h":74},
+	"frame": {"x":400,"y":456,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_Q.png":
 {
-	"frame": {"x":419,"y":1,"w":78,"h":74},
+	"frame": {"x":0,"y":556,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_R.png":
 {
-	"frame": {"x":419,"y":77,"w":78,"h":74},
+	"frame": {"x":100,"y":556,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_S.png":
 {
-	"frame": {"x":419,"y":153,"w":78,"h":74},
+	"frame": {"x":200,"y":556,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_T.png":
 {
-	"frame": {"x":419,"y":229,"w":78,"h":74},
+	"frame": {"x":300,"y":556,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_U.png":
 {
-	"frame": {"x":422,"y":305,"w":78,"h":74},
+	"frame": {"x":400,"y":556,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_V.png":
 {
-	"frame": {"x":422,"y":381,"w":78,"h":74},
+	"frame": {"x":0,"y":656,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_W.png":
 {
-	"frame": {"x":499,"y":1,"w":78,"h":74},
+	"frame": {"x":100,"y":656,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_X.png":
 {
-	"frame": {"x":499,"y":77,"w":78,"h":74},
+	"frame": {"x":200,"y":656,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_Y.png":
 {
-	"frame": {"x":499,"y":153,"w":78,"h":74},
+	"frame": {"x":300,"y":656,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "keyboard/letters/Keyboard_White_Z.png":
 {
-	"frame": {"x":499,"y":229,"w":78,"h":74},
+	"frame": {"x":400,"y":656,"w":100,"h":100},
 	"rotated": false,
-	"trimmed": true,
-	"spriteSourceSize": {"x":11,"y":13,"w":78,"h":74},
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
 "PNG/Enemies/enemyBlack1.png":
 {
-	"frame": {"x":1,"y":259,"w":93,"h":84},
+	"frame": {"x":0,"y":756,"w":93,"h":84},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":93,"h":84},
@@ -234,7 +234,7 @@
 },
 "PNG/Lasers/laserBlue01.png":
 {
-	"frame": {"x":192,"y":259,"w":9,"h":54},
+	"frame": {"x":93,"y":756,"w":9,"h":54},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":54},
@@ -242,7 +242,7 @@
 },
 "PNG/Lasers/laserGreen13.png":
 {
-	"frame": {"x":1,"y":422,"w":9,"h":37},
+	"frame": {"x":102,"y":756,"w":9,"h":37},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":37},
@@ -250,19 +250,27 @@
 },
 "PNG/playerShip1_red.png":
 {
-	"frame": {"x":1,"y":345,"w":99,"h":75},
+	"frame": {"x":111,"y":756,"w":99,"h":75},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":99,"h":75},
 	"sourceSize": {"w":99,"h":75}
+},
+"PNG/UI/playerLife1_red.png":
+{
+	"frame": {"x":210,"y":756,"w":33,"h":26},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":33,"h":26},
+	"sourceSize": {"w":33,"h":26}
 }},
 "meta": {
 	"app": "http://www.codeandweb.com/texturepacker",
 	"version": "1.0",
 	"image": "sheet.png",
 	"format": "RGBA8888",
-	"size": {"w":578,"h":476},
+	"size": {"w":500,"h":840},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:71f396c68b6cbcc1036b19e0cce06f00:6f71039e4bec11da38bece9bf91aefa6:9c44ecd7e9a522007eaff2949095bc1d$"
+	"smartupdate": "$TexturePacker:SmartUpdate:33d6e57a31ecbc1966bbb12eab327ee7:2de58152862315b982861a86c7d2cc2a:9c44ecd7e9a522007eaff2949095bc1d$"
 }
 }

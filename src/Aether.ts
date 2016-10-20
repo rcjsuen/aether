@@ -276,6 +276,12 @@ class Game extends Phaser.State {
 	private targets: Phaser.Sprite[] = [];
 
 	/**
+	 * The sprites that represent the player's remaining number of
+	 * lives.
+	 */
+	private lives: Phaser.Sprite[] = [];
+
+	/**
 	 * The level that the user is currently on.
 	 */
 	private level: number = 1;
@@ -286,6 +292,11 @@ class Game extends Phaser.State {
 	 * Whether the game has finished or not.
 	 */
 	private finished: boolean = false;
+
+	/**
+	 * Whether the game should stop spawning enemies or not.
+	 */
+	private haltEnemySpawns: boolean = false;
 
 	private wordManager: WordManager;
 
@@ -367,7 +378,6 @@ class Game extends Phaser.State {
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
 		this.game.physics.arcade.enable(this.player);
-		this.player.body.collideWorldBounds = true;
 
 		this.fire = this.game.add.audio('fire');
 
@@ -378,6 +388,9 @@ class Game extends Phaser.State {
 		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
 		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
 		this.inputText.anchor.setTo(0.5, 0.5);
+
+		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
 
 		this.buttons = this.game.add.group();
 		this.buttons.enableBody = true;
@@ -561,7 +574,7 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime && !this.haltEnemySpawns) {
 			this.waitTime = 5000;
 			this.gameTime = this.game.time.time;
 			
@@ -589,11 +602,13 @@ class Game extends Phaser.State {
 			}
 		}
 
-		for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-			if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-				if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-					this.enemyBulletTimes[i] = null;
-					this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+		if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
+			for (var i = 0; i < this.enemyBulletTimes.length; i++) {
+				if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
+					if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
+						this.enemyBulletTimes[i] = null;
+						this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+					}
 				}
 			}
 		}
@@ -612,6 +627,15 @@ class Game extends Phaser.State {
 			}
 		}
 
+		if (this.player.body.y < 415) {
+			// stop moving the new ship
+			this.player.body.velocity.y = 0;
+			this.player.body.y = 415;
+			// start respawning enemies
+			this.haltEnemySpawns = false;
+			this.gameTime = this.game.time.time;
+		}
+
 		this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
@@ -620,10 +644,6 @@ class Game extends Phaser.State {
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
-		if (this.difficulty !== Difficulty.HARD) {
-			return null;
-		}
-
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
@@ -659,7 +679,9 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+		if (this.difficulty === Difficulty.HARD) {
+			this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+		}
 		this.wordCount++;
 	}
 
@@ -743,19 +765,46 @@ class Game extends Phaser.State {
 		}
 	}
 
-	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
-		player.damage(1);
-		if (player.health === 0) {
-			this.endGame();
+	private decreaseHealth() {
+		if (this.player.health === 1) {
+			this.haltEnemySpawns = true;
+
+			this.player.health = 3;
+			this.player.body.y = this.game.height + 100;
+
+			this.sprites.forEach((sprite) => {
+				if (sprite !== null && sprite !== undefined) {
+					sprite.body.velocity.y = sprite.body.velocity.y * 2;
+				}
+			});
+			this.enemyBullets.forEach((sprite) => {
+				if (sprite !== null && sprite !== undefined) {
+					sprite.body.velocity.y = sprite.body.velocity.y * 2;
+				}
+			});
+
+			setTimeout(() => {
+				this.player.body.velocity.y = -100;
+			}, 3000);
+			
+			if (this.lives.length > 0) {
+				this.lives[this.lives.length - 1].kill();
+				this.lives.splice(this.lives.length - 1, 1);
+			} else {
+				this.endGame();
+			}
+		} else {
+			this.player.damage(1);
 		}
+	}
+
+	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
+		this.decreaseHealth();
 		this.kill(enemy);
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
-		player.damage(1);
-		if (player.health === 0) {
-			this.endGame();
-		}
+		this.decreaseHealth();
 		
 		let index = this.enemyBullets.indexOf(enemyBullet);
 		this.enemyBullets[index].kill();
