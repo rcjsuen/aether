@@ -1,3 +1,8 @@
+enum Language {
+	ENGLISH,
+	JAPANESE
+}
+
 class Aether extends Phaser.Game {
 
 	/**
@@ -6,9 +11,14 @@ class Aether extends Phaser.Game {
 	 */
 	private wordManager: WordManager = new WordManager();
 
+	private localization: Localization = new Localization();
+
+	private language: Language = Language.JAPANESE;
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
+		this.state.add('language', LanguageScreen);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
 		this.state.add('gameover', GameOver);
@@ -19,6 +29,14 @@ class Aether extends Phaser.Game {
 	 */
 	public getWordManager(): WordManager {
 		return this.wordManager;
+	}
+
+	public setLanguage(language: Language): void {
+		this.language = language;
+	}
+
+	public getLocalizedString(key: string): string {
+		return this.localization.getString(this.language, key);
 	}
 
 }
@@ -33,6 +51,11 @@ class Boot extends Phaser.State {
 			'assets/audio/sfx_laser1.ogg',
 			'assets/audio/sfx_laser1.m4a'
 		]);
+		this.load.audio('explosion', [
+			'assets/audio/8bit_bomb_explosion.mp3',
+			'assets/audio/8bit_bomb_explosion.ogg',
+			'assets/audio/8bit_bomb_explosion.m4a'
+		]);
 	}
 
 	public create(): void {
@@ -42,7 +65,53 @@ class Boot extends Phaser.State {
 
 		this.game.plugins.add(Phaser.Plugin.SaveCPU);
 		
-		this.game.state.start('title');
+		this.game.state.start('language');
+	}
+}
+
+class LanguageScreen extends Phaser.State {
+
+	private background: Phaser.TileSprite;
+
+	private englishText: Phaser.Text;
+
+	private japaneseText: Phaser.Text;
+
+	private tilePositionY: number;
+
+	public create(): void {
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.autoScroll(0, 50);
+
+		this.englishText = this.createText(this.game.height / 100 * 45, "English", Language.ENGLISH);
+		this.japaneseText = this.createText(this.game.height / 100 * 55, "日本語", Language.JAPANESE);
+	}
+
+	private createText(y: number, content: string, language: Language): Phaser.Text {
+		let languageText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
+		languageText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		languageText.anchor.setTo(0.5, 0.5);
+		languageText.inputEnabled = true;
+		languageText.events.onInputOver.add(() => {
+			languageText.fill = "#88ff88";
+		});
+		languageText.events.onInputOut.add(() => {
+			languageText.fill = "#ffffff";
+		});
+		languageText.events.onInputDown.add(() => {
+			this.fadeTexts();
+			(this.game as Aether).setLanguage(language);
+			setTimeout(() => {
+				this.tilePositionY = this.background.tilePosition.y;
+				this.game.state.start('title', true, false, this.tilePositionY);
+			}, 1000);
+		});
+		return languageText;
+	}
+
+	private fadeTexts(): void {
+		this.game.add.tween(this.englishText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+		this.game.add.tween(this.japaneseText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 }
 
@@ -68,6 +137,8 @@ class TitleScreen extends Phaser.State {
 	 */
 	private hardText: Phaser.Text;
 
+	private background: Phaser.TileSprite;
+
 	/**
 	 * The difficulty of the game that the user has selected.
 	 */
@@ -84,21 +155,27 @@ class TitleScreen extends Phaser.State {
 	 */
 	private timeElapsed: number = -1;
 
-	public init(): void {
+	private tilePositionY: number;
+
+	public init(tilePositionY: number): void {
 		this.timeElapsed = -1;
+		this.tilePositionY = tilePositionY;
 	}
 
 	public create(): void {
-		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.tilePosition.y = this.tilePositionY;
+		this.background.autoScroll(0, 50);
 
 		this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether",  { fontSize: '64px', fill: '#ffffff' });
 		this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.titleText.anchor.setTo(0.5, 0.5);
 
-		this.easyText = this.createText("Easy", 300, Difficulty.EASY);
-		this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
-		this.hardText = this.createText("Hard", 400, Difficulty.HARD);
+		
+		let aether = this.game as Aether;
+		this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+		this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+		this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
 		
 		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
@@ -109,11 +186,12 @@ class TitleScreen extends Phaser.State {
 	/**
 	 * Fade out the texts on the screen.
 	 */
-	private fadeTexts(): void {
+	private fadeOut(): void {
 		this.applyFade(this.titleText);
 		this.applyFade(this.easyText);
 		this.applyFade(this.normalText);
 		this.applyFade(this.hardText);
+		this.applyFade(this.background);
 	}
 
 	/**
@@ -121,8 +199,8 @@ class TitleScreen extends Phaser.State {
 	 * 
 	 * @param text the text to fade out
 	 */
-	private applyFade(text: Phaser.Text): void {
-		this.game.add.tween(text).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+	private applyFade(sprite: PIXI.Sprite): void {
+		this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 
 	private createText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
@@ -146,7 +224,7 @@ class TitleScreen extends Phaser.State {
 	public update(): void {
 		if (this.ship !== null && !this.ship.inWorld) {
 			this.timeElapsed = this.game.time.time;
-			this.fadeTexts();
+			this.fadeOut();
 			this.ship.kill();
 			this.ship = null;
 		}
@@ -160,7 +238,7 @@ class TitleScreen extends Phaser.State {
 
 enum Difficulty {
 	EASY,
-	NORMAL,
+	MEDIUM,
 	HARD
 }
 
@@ -253,6 +331,11 @@ class Game extends Phaser.State {
 	private score: number = 0;
 
 	/**
+	 * The background sprite that is tiled and moving.
+	 */
+	private background: Phaser.TileSprite;
+
+	/**
 	 * The text field where the user's input will be displayed with.
 	 */
 	private inputText: Phaser.Text;
@@ -261,9 +344,21 @@ class Game extends Phaser.State {
 	
 	private enemyBulletsGroup: Phaser.Group;
 	private enemies: Phaser.Group;
+
+	/**
+	 * The group of shield power ups.
+	 */
+	private shields: Phaser.Group;
 	private wordsGroup: Phaser.Group;
+
 	private player: Phaser.Sprite = null;
+
+	/**
+	 * The player's shield if one is up and operational.
+	 */
+	private shield: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
+	private explosion: Phaser.Sound;
 
 	private wordCount: number = 0;
 
@@ -276,6 +371,12 @@ class Game extends Phaser.State {
 	private targets: Phaser.Sprite[] = [];
 
 	/**
+	 * The sprites that represent the player's remaining number of
+	 * lives.
+	 */
+	private lives: Phaser.Sprite[] = [];
+
+	/**
 	 * The level that the user is currently on.
 	 */
 	private level: number = 1;
@@ -286,6 +387,11 @@ class Game extends Phaser.State {
 	 * Whether the game has finished or not.
 	 */
 	private finished: boolean = false;
+
+	/**
+	 * Whether the game should stop spawning enemies or not.
+	 */
+	private haltEnemySpawns: boolean = false;
 
 	private wordManager: WordManager;
 
@@ -349,8 +455,8 @@ class Game extends Phaser.State {
 	}
 
 	public create() {
-		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.autoScroll(0, 50);
 
 		this.bullets = this.game.add.physicsGroup();
 		this.bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
@@ -362,22 +468,27 @@ class Game extends Phaser.State {
 		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
 		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
-		this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
+		this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
 		this.player.health = 3;
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
 		this.game.physics.arcade.enable(this.player);
-		this.player.body.collideWorldBounds = true;
 
 		this.fire = this.game.add.audio('fire');
+		this.explosion = this.game.add.audio('explosion');
 
 		this.enemies = this.game.add.group();
 		this.enemies.enableBody = true;
+		this.shields = this.game.add.group();
+		this.shields.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16,  (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
 		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
 		this.inputText.anchor.setTo(0.5, 0.5);
+
+		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
 
 		this.buttons = this.game.add.group();
 		this.buttons.enableBody = true;
@@ -561,7 +672,7 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+		if (!this.finished && this.game.time.time - this.gameTime > this.waitTime && !this.haltEnemySpawns) {
 			this.waitTime = 5000;
 			this.gameTime = this.game.time.time;
 			
@@ -589,11 +700,13 @@ class Game extends Phaser.State {
 			}
 		}
 
-		for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-			if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-				if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-					this.enemyBulletTimes[i] = null;
-					this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+		if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
+			for (var i = 0; i < this.enemyBulletTimes.length; i++) {
+				if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
+					if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
+						this.enemyBulletTimes[i] = null;
+						this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+					}
 				}
 			}
 		}
@@ -612,18 +725,32 @@ class Game extends Phaser.State {
 			}
 		}
 
+		if (this.player.body.y < 400) {
+			// stop moving the new ship
+			this.player.body.velocity.y = 0;
+			this.player.body.y = 400;
+			// scroll the background again now that the ship is in
+			// position
+			this.background.autoScroll(0, 50);
+			// start respawning enemies
+			this.haltEnemySpawns = false;
+			this.gameTime = this.game.time.time;
+		}
+
 		this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
+		if (this.shield !== null) {
+			// check for shield collision
+			this.game.physics.arcade.overlap(this.shield, this.sprites, this.shieldDamagedByShip, null, this);
+			this.game.physics.arcade.overlap(this.shield, this.enemyBulletsGroup, this.shieldDamagedByBullet, null, this);
+		}
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
 		this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this)
+		this.game.physics.arcade.overlap(this.player, this.shields, this.grantShield, null, this)
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
-		if (this.difficulty !== Difficulty.HARD) {
-			return null;
-		}
-
 		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
 		rotate = Phaser.Math.radToDeg(rotate) + 90;
 
@@ -659,8 +786,58 @@ class Game extends Phaser.State {
 		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
-		this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+		if (this.difficulty === Difficulty.HARD) {
+			this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+		}
 		this.wordCount++;
+	}
+
+	/**
+	 * Create a shield power up at the location of the given enemy if
+	 * the system allows it.
+	 */
+	private createShieldPowerUp(enemy: Phaser.Sprite) {
+		// give enemies a 10% chance of dropping a shield power up
+		if (Math.random() > 0.1) {
+			return;
+		}
+
+		let slope = (this.player.body.y - enemy.body.y) / (this.player.body.x - enemy.body.x);
+		let powerUp = this.shields.create(
+			enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2),
+			'sheet', 'PNG/Power-ups/shield_silver.png');
+		this.game.physics.enable(powerUp);
+		powerUp.anchor.setTo(0.5, 0.5);
+		powerUp.scale.setTo(0.5, 0.5);
+		powerUp.body.velocity.x = 100 / slope; 
+		powerUp.body.velocity.y = 100;
+	}
+
+	/**
+	 * Decrease the shield of the player. If the player's shield's
+	 * health is dropped to zero, it will be destroyed.
+	 */
+	private decreaseShieldHealth() {
+		this.shield.damage(1);
+		this.shield.alpha = this.shield.health / this.shield.maxHealth;
+		if (this.shield.health === 0) {
+			this.shield = null;
+		}
+	}
+
+	private shieldDamagedByShip(shield: Phaser.Sprite, enemy: Phaser.Sprite) {
+		this.decreaseShieldHealth();
+		this.kill(enemy);
+	}
+
+	private shieldDamagedByBullet(shield: Phaser.Sprite, bullet: Phaser.Sprite) {
+		this.decreaseShieldHealth();
+		let index = this.enemyBullets.indexOf(bullet);
+		this.enemyBullets[index].kill();
+		this.enemyLetters[index].kill();
+		this.enemyBullets[index] = null;
+		this.enemyLetters[index] = null;
+		this.targets[index] = null;
 	}
 
 	/**
@@ -671,13 +848,28 @@ class Game extends Phaser.State {
 	 */
 	private updateScore(increment: number) {
 		this.score += increment;
-		this.scoreText.text = "Score: " + this.score;
+		this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score;
+	}
+
+	private animateDeath(enemy: Phaser.Sprite) {
+		let smoke = this.game.add.sprite(enemy.body.x + (enemy.body.width / 2),
+			enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Effects/spaceEffects_016.png');
+		smoke.anchor.setTo(0.5, 0.5);
+		smoke.animations.add('run',
+			[ 'PNG/Effects/spaceEffects_015.png', 'PNG/Effects/spaceEffects_014.png', 'PNG/Effects/spaceEffects_013.png',
+			'PNG/Effects/spaceEffects_012.png', 'PNG/Effects/spaceEffects_011.png', 'PNG/Effects/spaceEffects_010.png',
+			'PNG/Effects/spaceEffects_009.png', 'PNG/Effects/spaceEffects_008.png', ],
+			10, false);
+		smoke.animations.play('run', 10, false, true);
+		this.explosion.play();
 	}
 
 	private destroy(sprite, bullet) {
 		let index = this.bullets.getChildIndex(bullet);
 		for (let i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
+				this.animateDeath(sprite);
+				this.createShieldPowerUp(sprite);
 				this.sprites[i].kill();
 				this.words[i].kill();
 				bullet.kill();
@@ -743,19 +935,47 @@ class Game extends Phaser.State {
 		}
 	}
 
-	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
-		player.damage(1);
-		if (player.health === 0) {
-			this.endGame();
+	private decreaseHealth() {
+		if (this.player.health === 1) {
+			this.haltEnemySpawns = true;
+			this.background.autoScroll(0, 0);
+
+			this.player.health = 3;
+			this.player.body.y = this.game.height + 100;
+
+			this.sprites.forEach((sprite) => {
+				if (sprite !== null && sprite !== undefined) {
+					sprite.body.velocity.y = sprite.body.velocity.y * 2;
+				}
+			});
+			this.enemyBullets.forEach((sprite) => {
+				if (sprite !== null && sprite !== undefined) {
+					sprite.body.velocity.y = sprite.body.velocity.y * 2;
+				}
+			});
+
+			setTimeout(() => {
+				this.player.body.velocity.y = -100;
+			}, 3000);
+			
+			if (this.lives.length > 0) {
+				this.lives[this.lives.length - 1].kill();
+				this.lives.splice(this.lives.length - 1, 1);
+			} else {
+				this.endGame();
+			}
+		} else {
+			this.player.damage(1);
 		}
+	}
+
+	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
+		this.decreaseHealth();
 		this.kill(enemy);
 	}
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
-		player.damage(1);
-		if (player.health === 0) {
-			this.endGame();
-		}
+		this.decreaseHealth();
 		
 		let index = this.enemyBullets.indexOf(enemyBullet);
 		this.enemyBullets[index].kill();
@@ -776,6 +996,27 @@ class Game extends Phaser.State {
 		this.kill(enemy);
 	}
 	
+	/**
+	 * Grants the player a shield.
+	 */
+	private grantShield(player: Phaser.Sprite, powerUp: Phaser.Sprite) {
+		// destroy the power up
+		powerUp.kill();
+		
+		if (this.shield === null) {
+			// shield doesn't exist, then create one
+			this.shield = this.game.add.sprite(this.game.width / 2, 410, 'sheet', 'PNG/Effects/shield3.png');
+			this.shield.maxHealth = 3;
+			this.shield.scale.setTo(0.5, 0.5);
+			this.shield.anchor.setTo(0.5);
+			this.game.physics.enable(this.shield);
+		} else {
+			// shield already exists, reset its alpha state
+			this.shield.alpha = 1;
+		}
+		this.shield.health = 3;
+	}
+
 	private fireBullet(enemy: Phaser.Sprite) {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
 		let bullet = this.bullets.getFirstExists(false);
@@ -797,7 +1038,7 @@ class Game extends Phaser.State {
 
 	private endGame(): void {
 		window.removeEventListener("keydown", this.backspaceListener, false);
-		this.game.state.start('gameover', true, false, this.score);
+		this.game.state.start('gameover', true, false, this.difficulty, this.score);
 	}
 
 }
@@ -808,6 +1049,8 @@ class GameOver extends Phaser.State {
 	 * The text field to display the user's score.
 	 */
 	private scoreText: Phaser.Text;
+
+	private difficultyKey: string;
 
 	/**
 	 * The user's score.
@@ -825,24 +1068,52 @@ class GameOver extends Phaser.State {
 	 */
 	private increment: number;
 
-	public init(score: number) {
+	public init(difficulty: Difficulty, score: number) {
+		switch (difficulty) {
+			case Difficulty.EASY:
+				this.difficultyKey = DIFFICULTY_EASY;
+				break;
+			case Difficulty.MEDIUM:
+				this.difficultyKey = DIFFICULTY_MEDIUM;
+				break;
+			case Difficulty.HARD:
+				this.difficultyKey = DIFFICULTY_HARD;
+				break;
+		}
 		this.score = score;
 		this.increment = this.score / 100;
 	}
 
 	public create(): void {
+		let aether = (this.game as Aether);
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
 		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
 
-		let gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over",  { fontSize: '64px', fill: '#ffffff' });
+		let gameOverText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 2,
+			aether.getLocalizedString(GAME_OVER),
+			{ fontSize: '48px', fill: '#ffffff' });
 		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		gameOverText.anchor.setTo(0.5, 0.5);
 
-		this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Score: 0",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		let difficultyText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 4,
+			aether.getLocalizedString(this.difficultyKey),
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
+		difficultyText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		difficultyText.anchor.setTo(0.5, 0.5);
+
+		this.scoreText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 5,
+			aether.getLocalizedString(SCORE) + ": 0",
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
 		this.scoreText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.scoreText.anchor.setTo(0.5, 0.5);
 
-		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		let titleText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 7,
+			aether.getLocalizedString(RETURN_MAIN),
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
 		titleText.inputEnabled = true;
 		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		titleText.anchor.setTo(0.5, 0.5);
@@ -866,7 +1137,7 @@ class GameOver extends Phaser.State {
 				this.current = this.score;
 			}
 			// don't show decimals to the user
-			this.scoreText.text = "Score: " + Math.floor(this.current);
+			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.current;
 		}
 	}
 }
@@ -1074,6 +1345,53 @@ class WordManager {
 		}
 	}
 
+}
+
+const EASY = "EASY";
+const MEDIUM = "MEDIUM";
+const HARD = "HARD";
+const DIFFICULTY_EASY = "DIFFICULTY_EASY";
+const DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
+const DIFFICULTY_HARD = "DIFFICULTY_HARD";
+const SCORE = "SCORE";
+const RETURN_MAIN = "RETURN_MAIN";
+const GAME_OVER = "GAME_OVER";
+
+class Localization {
+
+	english = {
+		EASY: "Easy",
+		MEDIUM: "Medium",
+		HARD: "Hard",
+		DIFFICULTY_EASY: "Difficulty: Easy",
+		DIFFICULTY_MEDIUM: "Difficulty: Medium",
+		DIFFICULTY_HARD: "Difficulty: Hard",
+		SCORE: "Score",
+		RETURN_MAIN: "Return to Main Menu",
+		GAME_OVER: "Game Over"
+	};
+
+	japanese = {
+		EASY: "易しい",
+		MEDIUM: "普通",
+		HARD: "難しい",
+		DIFFICULTY_EASY: "難易度: 易しい",
+		DIFFICULTY_MEDIUM: "難易度: 普通",
+		DIFFICULTY_HARD: "難易度: 難しい",
+		SCORE: "スコア",
+		RETURN_MAIN: "メインメニューに戻る",
+		GAME_OVER: "ゲームオーバー"
+	};
+
+	public getString(language: Language, key: string): string {
+		switch (language) {
+			case Language.ENGLISH:
+				return this.english[key];
+			case Language.JAPANESE:
+				return this.japanese[key];
+		}
+		return null;
+	}
 }
 
 window.onload = () => {
