@@ -3,18 +3,32 @@ var __extends = (this && this.__extends) || function (d, b) {
     function __() { this.constructor = d; }
     d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
 };
+var Language;
+(function (Language) {
+    Language[Language["ENGLISH"] = 0] = "ENGLISH";
+    Language[Language["JAPANESE"] = 1] = "JAPANESE";
+})(Language || (Language = {}));
 var Aether = (function (_super) {
     __extends(Aether, _super);
     function Aether() {
         _super.call(this, 360, 640, Phaser.CANVAS, '');
         this.wordManager = new WordManager();
+        this.localization = new Localization();
+        this.language = Language.JAPANESE;
         this.state.add('boot', Boot, true);
+        this.state.add('language', LanguageScreen);
         this.state.add('title', TitleScreen);
         this.state.add('game', Game);
         this.state.add('gameover', GameOver);
     }
     Aether.prototype.getWordManager = function () {
         return this.wordManager;
+    };
+    Aether.prototype.setLanguage = function (language) {
+        this.language = language;
+    };
+    Aether.prototype.getLocalizedString = function (key) {
+        return this.localization.getString(this.language, key);
     };
     return Aether;
 }(Phaser.Game));
@@ -30,15 +44,59 @@ var Boot = (function (_super) {
             'assets/audio/sfx_laser1.ogg',
             'assets/audio/sfx_laser1.m4a'
         ]);
+        this.load.audio('explosion', [
+            'assets/audio/8bit_bomb_explosion.mp3',
+            'assets/audio/8bit_bomb_explosion.ogg',
+            'assets/audio/8bit_bomb_explosion.m4a'
+        ]);
     };
     Boot.prototype.create = function () {
         this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
         this.game.scale.pageAlignVertically = true;
         this.game.scale.pageAlignHorizontally = true;
         this.game.plugins.add(Phaser.Plugin.SaveCPU);
-        this.game.state.start('title');
+        this.game.state.start('language');
     };
     return Boot;
+}(Phaser.State));
+var LanguageScreen = (function (_super) {
+    __extends(LanguageScreen, _super);
+    function LanguageScreen() {
+        _super.apply(this, arguments);
+    }
+    LanguageScreen.prototype.create = function () {
+        this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+        this.background.autoScroll(0, 50);
+        this.englishText = this.createText(this.game.height / 100 * 45, "English", Language.ENGLISH);
+        this.japaneseText = this.createText(this.game.height / 100 * 55, "日本語", Language.JAPANESE);
+    };
+    LanguageScreen.prototype.createText = function (y, content, language) {
+        var _this = this;
+        var languageText = this.game.add.text(this.game.width / 2, y, content, { fontSize: '28px', fill: '#ffffff' });
+        languageText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        languageText.anchor.setTo(0.5, 0.5);
+        languageText.inputEnabled = true;
+        languageText.events.onInputOver.add(function () {
+            languageText.fill = "#88ff88";
+        });
+        languageText.events.onInputOut.add(function () {
+            languageText.fill = "#ffffff";
+        });
+        languageText.events.onInputDown.add(function () {
+            _this.fadeTexts();
+            _this.game.setLanguage(language);
+            setTimeout(function () {
+                _this.tilePositionY = _this.background.tilePosition.y;
+                _this.game.state.start('title', true, false, _this.tilePositionY);
+            }, 1000);
+        });
+        return languageText;
+    };
+    LanguageScreen.prototype.fadeTexts = function () {
+        this.game.add.tween(this.englishText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+        this.game.add.tween(this.japaneseText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+    };
+    return LanguageScreen;
 }(Phaser.State));
 var TitleScreen = (function (_super) {
     __extends(TitleScreen, _super);
@@ -46,31 +104,35 @@ var TitleScreen = (function (_super) {
         _super.apply(this, arguments);
         this.timeElapsed = -1;
     }
-    TitleScreen.prototype.init = function () {
+    TitleScreen.prototype.init = function (tilePositionY) {
         this.timeElapsed = -1;
+        this.tilePositionY = tilePositionY;
     };
     TitleScreen.prototype.create = function () {
-        var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-        bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+        this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+        this.background.tilePosition.y = this.tilePositionY;
+        this.background.autoScroll(0, 50);
         this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether", { fontSize: '64px', fill: '#ffffff' });
         this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.titleText.anchor.setTo(0.5, 0.5);
-        this.easyText = this.createText("Easy", 300, Difficulty.EASY);
-        this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
-        this.hardText = this.createText("Hard", 400, Difficulty.HARD);
+        var aether = this.game;
+        this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+        this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+        this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
         this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
         this.ship.scale.setTo(0.5, 0.5);
         this.ship.anchor.setTo(0.5);
         this.game.physics.arcade.enable(this.ship);
     };
-    TitleScreen.prototype.fadeTexts = function () {
+    TitleScreen.prototype.fadeOut = function () {
         this.applyFade(this.titleText);
         this.applyFade(this.easyText);
         this.applyFade(this.normalText);
         this.applyFade(this.hardText);
+        this.applyFade(this.background);
     };
-    TitleScreen.prototype.applyFade = function (text) {
-        this.game.add.tween(text).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+    TitleScreen.prototype.applyFade = function (sprite) {
+        this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
     };
     TitleScreen.prototype.createText = function (content, y, difficulty) {
         var _this = this;
@@ -93,7 +155,7 @@ var TitleScreen = (function (_super) {
     TitleScreen.prototype.update = function () {
         if (this.ship !== null && !this.ship.inWorld) {
             this.timeElapsed = this.game.time.time;
-            this.fadeTexts();
+            this.fadeOut();
             this.ship.kill();
             this.ship = null;
         }
@@ -106,7 +168,7 @@ var TitleScreen = (function (_super) {
 var Difficulty;
 (function (Difficulty) {
     Difficulty[Difficulty["EASY"] = 0] = "EASY";
-    Difficulty[Difficulty["NORMAL"] = 1] = "NORMAL";
+    Difficulty[Difficulty["MEDIUM"] = 1] = "MEDIUM";
     Difficulty[Difficulty["HARD"] = 2] = "HARD";
 })(Difficulty || (Difficulty = {}));
 var ENEMY_MOVE_SPEED = 10;
@@ -175,6 +237,7 @@ var Game = (function (_super) {
         this.waitTime = 5000;
         this.score = 0;
         this.player = null;
+        this.shield = null;
         this.wordCount = 0;
         this.words = [];
         this.sprites = [];
@@ -182,8 +245,10 @@ var Game = (function (_super) {
         this.enemyBulletTimes = [];
         this.enemyLetters = [];
         this.targets = [];
+        this.lives = [];
         this.level = 1;
         this.finished = false;
+        this.haltEnemySpawns = false;
     }
     Game.prototype.init = function (difficulty) {
         this.wordManager = this.game.getWordManager();
@@ -231,8 +296,8 @@ var Game = (function (_super) {
         window.addEventListener("keydown", this.backspaceListener, false);
     };
     Game.prototype.create = function () {
-        var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-        bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+        this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+        this.background.autoScroll(0, 50);
         this.bullets = this.game.add.physicsGroup();
         this.bullets.createMultiple(32, 'sheet', 'PNG/Lasers/laserBlue01.png', false);
         this.bullets.setAll('checkWorldBounds', true);
@@ -241,19 +306,23 @@ var Game = (function (_super) {
         this.enemyBulletsGroup.createMultiple(32, 'sheet', 'PNG/Lasers/laserGreen13.png', false);
         this.enemyBulletsGroup.setAll('checkWorldBounds', true);
         this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
-        this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
+        this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
         this.player.health = 3;
         this.player.scale.setTo(0.5, 0.5);
         this.player.anchor.setTo(0.5);
         this.game.physics.arcade.enable(this.player);
-        this.player.body.collideWorldBounds = true;
         this.fire = this.game.add.audio('fire');
+        this.explosion = this.game.add.audio('explosion');
         this.enemies = this.game.add.group();
         this.enemies.enableBody = true;
+        this.shields = this.game.add.group();
+        this.shields.enableBody = true;
         this.wordsGroup = this.game.add.group();
-        this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
+        this.scoreText = this.game.add.text(16, 16, this.game.getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
         this.inputText = this.game.add.text(this.game.width / 2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
         this.inputText.anchor.setTo(0.5, 0.5);
+        this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+        this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
         this.buttons = this.game.add.group();
         this.buttons.enableBody = true;
         this.createKeys();
@@ -413,7 +482,7 @@ var Game = (function (_super) {
                 this.enemyLetters[i] = null;
             }
         }
-        if (!this.finished && this.game.time.time - this.gameTime > this.waitTime) {
+        if (!this.finished && this.game.time.time - this.gameTime > this.waitTime && !this.haltEnemySpawns) {
             this.waitTime = 5000;
             this.gameTime = this.game.time.time;
             var word = this.wordManager.getNextWord();
@@ -435,11 +504,13 @@ var Game = (function (_super) {
                 this.createEnemy(word);
             }
         }
-        for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-            if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-                if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-                    this.enemyBulletTimes[i] = null;
-                    this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+        if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
+            for (var i = 0; i < this.enemyBulletTimes.length; i++) {
+                if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
+                    if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
+                        this.enemyBulletTimes[i] = null;
+                        this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
+                    }
                 }
             }
         }
@@ -455,16 +526,25 @@ var Game = (function (_super) {
                 this.enemyLetters[i].y = this.enemyBullets[i].y - 25;
             }
         }
+        if (this.player.body.y < 400) {
+            this.player.body.velocity.y = 0;
+            this.player.body.y = 400;
+            this.background.autoScroll(0, 50);
+            this.haltEnemySpawns = false;
+            this.gameTime = this.game.time.time;
+        }
         this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
         this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
+        if (this.shield !== null) {
+            this.game.physics.arcade.overlap(this.shield, this.sprites, this.shieldDamagedByShip, null, this);
+            this.game.physics.arcade.overlap(this.shield, this.enemyBulletsGroup, this.shieldDamagedByBullet, null, this);
+        }
         this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
         this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
         this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this);
+        this.game.physics.arcade.overlap(this.player, this.shields, this.grantShield, null, this);
     };
     Game.prototype.fireEnemyBullet = function (attackingEnemy, letterIndex) {
-        if (this.difficulty !== Difficulty.HARD) {
-            return null;
-        }
         var rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
         rotate = Phaser.Math.radToDeg(rotate) + 90;
         var slope = (this.player.body.y - attackingEnemy.body.y) / (this.player.body.x - attackingEnemy.body.x);
@@ -494,17 +574,62 @@ var Game = (function (_super) {
         this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.wordsGroup.add(this.words[this.wordCount]);
         this.sprites[this.wordCount] = enemy;
-        this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+        if (this.difficulty === Difficulty.HARD) {
+            this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+        }
         this.wordCount++;
+    };
+    Game.prototype.createShieldPowerUp = function (enemy) {
+        if (Math.random() > 0.1) {
+            return;
+        }
+        var slope = (this.player.body.y - enemy.body.y) / (this.player.body.x - enemy.body.x);
+        var powerUp = this.shields.create(enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Power-ups/shield_silver.png');
+        this.game.physics.enable(powerUp);
+        powerUp.anchor.setTo(0.5, 0.5);
+        powerUp.scale.setTo(0.5, 0.5);
+        powerUp.body.velocity.x = 100 / slope;
+        powerUp.body.velocity.y = 100;
+    };
+    Game.prototype.decreaseShieldHealth = function () {
+        this.shield.damage(1);
+        this.shield.alpha = this.shield.health / this.shield.maxHealth;
+        if (this.shield.health === 0) {
+            this.shield = null;
+        }
+    };
+    Game.prototype.shieldDamagedByShip = function (shield, enemy) {
+        this.decreaseShieldHealth();
+        this.kill(enemy);
+    };
+    Game.prototype.shieldDamagedByBullet = function (shield, bullet) {
+        this.decreaseShieldHealth();
+        var index = this.enemyBullets.indexOf(bullet);
+        this.enemyBullets[index].kill();
+        this.enemyLetters[index].kill();
+        this.enemyBullets[index] = null;
+        this.enemyLetters[index] = null;
+        this.targets[index] = null;
     };
     Game.prototype.updateScore = function (increment) {
         this.score += increment;
-        this.scoreText.text = "Score: " + this.score;
+        this.scoreText.text = this.game.getLocalizedString(SCORE) + ": " + this.score;
+    };
+    Game.prototype.animateDeath = function (enemy) {
+        var smoke = this.game.add.sprite(enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Effects/spaceEffects_016.png');
+        smoke.anchor.setTo(0.5, 0.5);
+        smoke.animations.add('run', ['PNG/Effects/spaceEffects_015.png', 'PNG/Effects/spaceEffects_014.png', 'PNG/Effects/spaceEffects_013.png',
+            'PNG/Effects/spaceEffects_012.png', 'PNG/Effects/spaceEffects_011.png', 'PNG/Effects/spaceEffects_010.png',
+            'PNG/Effects/spaceEffects_009.png', 'PNG/Effects/spaceEffects_008.png',], 10, false);
+        smoke.animations.play('run', 10, false, true);
+        this.explosion.play();
     };
     Game.prototype.destroy = function (sprite, bullet) {
         var index = this.bullets.getChildIndex(bullet);
         for (var i = 0; i < this.sprites.length; i++) {
             if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
+                this.animateDeath(sprite);
+                this.createShieldPowerUp(sprite);
                 this.sprites[i].kill();
                 this.words[i].kill();
                 bullet.kill();
@@ -551,18 +676,44 @@ var Game = (function (_super) {
             this.targets[index] = null;
         }
     };
-    Game.prototype.damageShip = function (player, enemy) {
-        player.damage(1);
-        if (player.health === 0) {
-            this.endGame();
+    Game.prototype.decreaseHealth = function () {
+        var _this = this;
+        if (this.player.health === 1) {
+            this.haltEnemySpawns = true;
+            this.background.autoScroll(0, 0);
+            this.player.health = 3;
+            this.player.body.y = this.game.height + 100;
+            this.sprites.forEach(function (sprite) {
+                if (sprite !== null && sprite !== undefined) {
+                    sprite.body.velocity.y = sprite.body.velocity.y * 2;
+                }
+            });
+            this.enemyBullets.forEach(function (sprite) {
+                if (sprite !== null && sprite !== undefined) {
+                    sprite.body.velocity.y = sprite.body.velocity.y * 2;
+                }
+            });
+            setTimeout(function () {
+                _this.player.body.velocity.y = -100;
+            }, 3000);
+            if (this.lives.length > 0) {
+                this.lives[this.lives.length - 1].kill();
+                this.lives.splice(this.lives.length - 1, 1);
+            }
+            else {
+                this.endGame();
+            }
         }
+        else {
+            this.player.damage(1);
+        }
+    };
+    Game.prototype.damageShip = function (player, enemy) {
+        this.decreaseHealth();
         this.kill(enemy);
     };
     Game.prototype.damage = function (player, enemyBullet) {
-        player.damage(1);
-        if (player.health === 0) {
-            this.endGame();
-        }
+        this.decreaseHealth();
         var index = this.enemyBullets.indexOf(enemyBullet);
         this.enemyBullets[index].kill();
         this.enemyLetters[index].kill();
@@ -572,6 +723,20 @@ var Game = (function (_super) {
     };
     Game.prototype.buttonsCollided = function (enemy, button) {
         this.kill(enemy);
+    };
+    Game.prototype.grantShield = function (player, powerUp) {
+        powerUp.kill();
+        if (this.shield === null) {
+            this.shield = this.game.add.sprite(this.game.width / 2, 410, 'sheet', 'PNG/Effects/shield3.png');
+            this.shield.maxHealth = 3;
+            this.shield.scale.setTo(0.5, 0.5);
+            this.shield.anchor.setTo(0.5);
+            this.game.physics.enable(this.shield);
+        }
+        else {
+            this.shield.alpha = 1;
+        }
+        this.shield.health = 3;
     };
     Game.prototype.fireBullet = function (enemy) {
         var diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
@@ -592,7 +757,7 @@ var Game = (function (_super) {
     };
     Game.prototype.endGame = function () {
         window.removeEventListener("keydown", this.backspaceListener, false);
-        this.game.state.start('gameover', true, false, this.score);
+        this.game.state.start('gameover', true, false, this.difficulty, this.score);
     };
     return Game;
 }(Phaser.State));
@@ -602,21 +767,36 @@ var GameOver = (function (_super) {
         _super.apply(this, arguments);
         this.current = 0;
     }
-    GameOver.prototype.init = function (score) {
+    GameOver.prototype.init = function (difficulty, score) {
+        switch (difficulty) {
+            case Difficulty.EASY:
+                this.difficultyKey = DIFFICULTY_EASY;
+                break;
+            case Difficulty.MEDIUM:
+                this.difficultyKey = DIFFICULTY_MEDIUM;
+                break;
+            case Difficulty.HARD:
+                this.difficultyKey = DIFFICULTY_HARD;
+                break;
+        }
         this.score = score;
         this.increment = this.score / 100;
     };
     GameOver.prototype.create = function () {
         var _this = this;
+        var aether = this.game;
         var bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
         bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
-        var gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over", { fontSize: '64px', fill: '#ffffff' });
+        var gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 10 * 2, aether.getLocalizedString(GAME_OVER), { fontSize: '48px', fill: '#ffffff' });
         gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         gameOverText.anchor.setTo(0.5, 0.5);
-        this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Score: 0", { fontSize: '28px', fill: '#ffffff', align: 'center' });
+        var difficultyText = this.game.add.text(this.game.width / 2, this.game.height / 10 * 4, aether.getLocalizedString(this.difficultyKey), { fontSize: '28px', fill: '#ffffff', align: 'center' });
+        difficultyText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+        difficultyText.anchor.setTo(0.5, 0.5);
+        this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 10 * 5, aether.getLocalizedString(SCORE) + ": 0", { fontSize: '28px', fill: '#ffffff', align: 'center' });
         this.scoreText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.scoreText.anchor.setTo(0.5, 0.5);
-        var titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen", { fontSize: '28px', fill: '#ffffff', align: 'center' });
+        var titleText = this.game.add.text(this.game.width / 2, this.game.height / 10 * 7, aether.getLocalizedString(RETURN_MAIN), { fontSize: '28px', fill: '#ffffff', align: 'center' });
         titleText.inputEnabled = true;
         titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         titleText.anchor.setTo(0.5, 0.5);
@@ -636,7 +816,7 @@ var GameOver = (function (_super) {
             if (this.current > this.score) {
                 this.current = this.score;
             }
-            this.scoreText.text = "Score: " + Math.floor(this.current);
+            this.scoreText.text = this.game.getLocalizedString(SCORE) + ": " + this.current;
         }
     };
     return GameOver;
@@ -763,6 +943,51 @@ var WordManager = (function () {
         }
     };
     return WordManager;
+}());
+var EASY = "EASY";
+var MEDIUM = "MEDIUM";
+var HARD = "HARD";
+var DIFFICULTY_EASY = "DIFFICULTY_EASY";
+var DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
+var DIFFICULTY_HARD = "DIFFICULTY_HARD";
+var SCORE = "SCORE";
+var RETURN_MAIN = "RETURN_MAIN";
+var GAME_OVER = "GAME_OVER";
+var Localization = (function () {
+    function Localization() {
+        this.english = {
+            EASY: "Easy",
+            MEDIUM: "Medium",
+            HARD: "Hard",
+            DIFFICULTY_EASY: "Difficulty: Easy",
+            DIFFICULTY_MEDIUM: "Difficulty: Medium",
+            DIFFICULTY_HARD: "Difficulty: Hard",
+            SCORE: "Score",
+            RETURN_MAIN: "Return to Main Menu",
+            GAME_OVER: "Game Over"
+        };
+        this.japanese = {
+            EASY: "易しい",
+            MEDIUM: "普通",
+            HARD: "難しい",
+            DIFFICULTY_EASY: "難易度: 易しい",
+            DIFFICULTY_MEDIUM: "難易度: 普通",
+            DIFFICULTY_HARD: "難易度: 難しい",
+            SCORE: "スコア",
+            RETURN_MAIN: "メインメニューに戻る",
+            GAME_OVER: "ゲームオーバー"
+        };
+    }
+    Localization.prototype.getString = function (language, key) {
+        switch (language) {
+            case Language.ENGLISH:
+                return this.english[key];
+            case Language.JAPANESE:
+                return this.japanese[key];
+        }
+        return null;
+    };
+    return Localization;
 }());
 window.onload = function () {
     var game = new Aether();
