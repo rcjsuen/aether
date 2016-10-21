@@ -56,6 +56,16 @@ class Boot extends Phaser.State {
 			'assets/audio/8bit_bomb_explosion.ogg',
 			'assets/audio/8bit_bomb_explosion.m4a'
 		]);
+		this.load.audio('shieldUp', [
+			'assets/audio/sfx_shieldUp.mp3',
+			'assets/audio/sfx_shieldUp.ogg',
+			'assets/audio/sfx_shieldUp.m4a'
+		]);
+		this.load.audio('shieldDown', [
+			'assets/audio/sfx_shieldDown.mp3',
+			'assets/audio/sfx_shieldDown.ogg',
+			'assets/audio/sfx_shieldDown.m4a'
+		]);
 	}
 
 	public create(): void {
@@ -359,6 +369,8 @@ class Game extends Phaser.State {
 	private shield: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
 	private explosion: Phaser.Sound;
+	private shieldUp: Phaser.Sound;
+	private shieldDown: Phaser.Sound;
 
 	private wordCount: number = 0;
 
@@ -476,6 +488,8 @@ class Game extends Phaser.State {
 
 		this.fire = this.game.add.audio('fire');
 		this.explosion = this.game.add.audio('explosion');
+		this.shieldUp = this.game.add.audio('shieldUp');
+		this.shieldDown = this.game.add.audio('shieldDown');
 
 		this.enemies = this.game.add.group();
 		this.enemies.enableBody = true;
@@ -818,6 +832,7 @@ class Game extends Phaser.State {
 	 * health is dropped to zero, it will be destroyed.
 	 */
 	private decreaseShieldHealth() {
+		this.shieldDown.play();
 		this.shield.damage(1);
 		this.shield.alpha = this.shield.health / this.shield.maxHealth;
 		if (this.shield.health === 0) {
@@ -1015,6 +1030,7 @@ class Game extends Phaser.State {
 			this.shield.alpha = 1;
 		}
 		this.shield.health = 3;
+		this.shieldUp.play();
 	}
 
 	private fireBullet(enemy: Phaser.Sprite) {
