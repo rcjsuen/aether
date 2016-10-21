@@ -51,6 +51,11 @@ class Boot extends Phaser.State {
 			'assets/audio/sfx_laser1.ogg',
 			'assets/audio/sfx_laser1.m4a'
 		]);
+		this.load.audio('explosion', [
+			'assets/audio/8bit_bomb_explosion.mp3',
+			'assets/audio/8bit_bomb_explosion.ogg',
+			'assets/audio/8bit_bomb_explosion.m4a'
+		]);
 	}
 
 	public create(): void {
@@ -353,6 +358,7 @@ class Game extends Phaser.State {
 	 */
 	private shield: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
+	private explosion: Phaser.Sound;
 
 	private wordCount: number = 0;
 
@@ -469,6 +475,7 @@ class Game extends Phaser.State {
 		this.game.physics.arcade.enable(this.player);
 
 		this.fire = this.game.add.audio('fire');
+		this.explosion = this.game.add.audio('explosion');
 
 		this.enemies = this.game.add.group();
 		this.enemies.enableBody = true;
@@ -844,10 +851,24 @@ class Game extends Phaser.State {
 		this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score;
 	}
 
+	private animateDeath(enemy: Phaser.Sprite) {
+		let smoke = this.game.add.sprite(enemy.body.x + (enemy.body.width / 2),
+			enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Effects/spaceEffects_016.png');
+		smoke.anchor.setTo(0.5, 0.5);
+		smoke.animations.add('run',
+			[ 'PNG/Effects/spaceEffects_015.png', 'PNG/Effects/spaceEffects_014.png', 'PNG/Effects/spaceEffects_013.png',
+			'PNG/Effects/spaceEffects_012.png', 'PNG/Effects/spaceEffects_011.png', 'PNG/Effects/spaceEffects_010.png',
+			'PNG/Effects/spaceEffects_009.png', 'PNG/Effects/spaceEffects_008.png', ],
+			10, false);
+		smoke.animations.play('run', 10, false, true);
+		this.explosion.play();
+	}
+
 	private destroy(sprite, bullet) {
 		let index = this.bullets.getChildIndex(bullet);
 		for (let i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
+				this.animateDeath(sprite);
 				this.createShieldPowerUp(sprite);
 				this.sprites[i].kill();
 				this.words[i].kill();
