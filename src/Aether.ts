@@ -1156,7 +1156,7 @@ class GameOver extends Phaser.State {
 				this.current = this.score;
 			}
 			// don't show decimals to the user
-			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.current;
+			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + Math.floor(this.current);
 		}
 	}
 }
