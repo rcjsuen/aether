@@ -2,7 +2,7 @@
 
 "Backgrounds/purple.png":
 {
-	"frame": {"x":0,"y":0,"w":256,"h":256},
+	"frame": {"x":144,"y":600,"w":256,"h":256},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":256,"h":256},
@@ -10,7 +10,7 @@
 },
 "keyboard/functions/Keyboard_White_Backspace_Alt.png":
 {
-	"frame": {"x":256,"y":0,"w":100,"h":100},
+	"frame": {"x":100,"y":400,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -18,7 +18,7 @@
 },
 "keyboard/letters/Keyboard_White_A.png":
 {
-	"frame": {"x":356,"y":0,"w":100,"h":100},
+	"frame": {"x":300,"y":400,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -26,7 +26,7 @@
 },
 "keyboard/letters/Keyboard_White_B.png":
 {
-	"frame": {"x":0,"y":256,"w":100,"h":100},
+	"frame": {"x":0,"y":400,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -34,7 +34,7 @@
 },
 "keyboard/letters/Keyboard_White_C.png":
 {
-	"frame": {"x":100,"y":256,"w":100,"h":100},
+	"frame": {"x":400,"y":400,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -42,7 +42,7 @@
 },
 "keyboard/letters/Keyboard_White_D.png":
 {
-	"frame": {"x":200,"y":256,"w":100,"h":100},
+	"frame": {"x":400,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -50,7 +50,7 @@
 },
 "keyboard/letters/Keyboard_White_E.png":
 {
-	"frame": {"x":300,"y":256,"w":100,"h":100},
+	"frame": {"x":200,"y":500,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -58,7 +58,7 @@
 },
 "keyboard/letters/Keyboard_White_F.png":
 {
-	"frame": {"x":400,"y":256,"w":100,"h":100},
+	"frame": {"x":300,"y":500,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -66,7 +66,7 @@
 },
 "keyboard/letters/Keyboard_White_G.png":
 {
-	"frame": {"x":0,"y":356,"w":100,"h":100},
+	"frame": {"x":400,"y":500,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -74,7 +74,7 @@
 },
 "keyboard/letters/Keyboard_White_H.png":
 {
-	"frame": {"x":100,"y":356,"w":100,"h":100},
+	"frame": {"x":100,"y":500,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -82,7 +82,7 @@
 },
 "keyboard/letters/Keyboard_White_I.png":
 {
-	"frame": {"x":200,"y":356,"w":100,"h":100},
+	"frame": {"x":200,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -90,7 +90,7 @@
 },
 "keyboard/letters/Keyboard_White_J.png":
 {
-	"frame": {"x":300,"y":356,"w":100,"h":100},
+	"frame": {"x":0,"y":500,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -98,7 +98,7 @@
 },
 "keyboard/letters/Keyboard_White_K.png":
 {
-	"frame": {"x":400,"y":356,"w":100,"h":100},
+	"frame": {"x":300,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -106,7 +106,7 @@
 },
 "keyboard/letters/Keyboard_White_L.png":
 {
-	"frame": {"x":0,"y":456,"w":100,"h":100},
+	"frame": {"x":400,"y":200,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -114,7 +114,7 @@
 },
 "keyboard/letters/Keyboard_White_M.png":
 {
-	"frame": {"x":100,"y":456,"w":100,"h":100},
+	"frame": {"x":0,"y":100,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -122,7 +122,7 @@
 },
 "keyboard/letters/Keyboard_White_N.png":
 {
-	"frame": {"x":200,"y":456,"w":100,"h":100},
+	"frame": {"x":200,"y":100,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -130,7 +130,7 @@
 },
 "keyboard/letters/Keyboard_White_O.png":
 {
-	"frame": {"x":300,"y":456,"w":100,"h":100},
+	"frame": {"x":300,"y":100,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -138,7 +138,7 @@
 },
 "keyboard/letters/Keyboard_White_P.png":
 {
-	"frame": {"x":400,"y":456,"w":100,"h":100},
+	"frame": {"x":273,"y":0,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -146,7 +146,7 @@
 },
 "keyboard/letters/Keyboard_White_Q.png":
 {
-	"frame": {"x":0,"y":556,"w":100,"h":100},
+	"frame": {"x":373,"y":0,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -154,7 +154,7 @@
 },
 "keyboard/letters/Keyboard_White_R.png":
 {
-	"frame": {"x":100,"y":556,"w":100,"h":100},
+	"frame": {"x":100,"y":100,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -162,7 +162,7 @@
 },
 "keyboard/letters/Keyboard_White_S.png":
 {
-	"frame": {"x":200,"y":556,"w":100,"h":100},
+	"frame": {"x":200,"y":200,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -170,7 +170,7 @@
 },
 "keyboard/letters/Keyboard_White_T.png":
 {
-	"frame": {"x":300,"y":556,"w":100,"h":100},
+	"frame": {"x":0,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -178,7 +178,7 @@
 },
 "keyboard/letters/Keyboard_White_U.png":
 {
-	"frame": {"x":400,"y":556,"w":100,"h":100},
+	"frame": {"x":400,"y":100,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -186,7 +186,7 @@
 },
 "keyboard/letters/Keyboard_White_V.png":
 {
-	"frame": {"x":0,"y":656,"w":100,"h":100},
+	"frame": {"x":100,"y":300,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -194,7 +194,7 @@
 },
 "keyboard/letters/Keyboard_White_W.png":
 {
-	"frame": {"x":100,"y":656,"w":100,"h":100},
+	"frame": {"x":300,"y":200,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -202,7 +202,7 @@
 },
 "keyboard/letters/Keyboard_White_X.png":
 {
-	"frame": {"x":200,"y":656,"w":100,"h":100},
+	"frame": {"x":100,"y":200,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -210,7 +210,7 @@
 },
 "keyboard/letters/Keyboard_White_Y.png":
 {
-	"frame": {"x":300,"y":656,"w":100,"h":100},
+	"frame": {"x":0,"y":200,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
@@ -218,15 +218,23 @@
 },
 "keyboard/letters/Keyboard_White_Z.png":
 {
-	"frame": {"x":400,"y":656,"w":100,"h":100},
+	"frame": {"x":200,"y":400,"w":100,"h":100},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":100,"h":100},
 	"sourceSize": {"w":100,"h":100}
 },
+"PNG/Effects/shield3.png":
+{
+	"frame": {"x":0,"y":600,"w":144,"h":137},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":144,"h":137},
+	"sourceSize": {"w":144,"h":137}
+},
 "PNG/Enemies/enemyBlack1.png":
 {
-	"frame": {"x":0,"y":756,"w":93,"h":84},
+	"frame": {"x":81,"y":0,"w":93,"h":84},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":93,"h":84},
@@ -234,7 +242,7 @@
 },
 "PNG/Lasers/laserBlue01.png":
 {
-	"frame": {"x":93,"y":756,"w":9,"h":54},
+	"frame": {"x":9,"y":0,"w":9,"h":54},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":54},
@@ -242,7 +250,7 @@
 },
 "PNG/Lasers/laserGreen13.png":
 {
-	"frame": {"x":102,"y":756,"w":9,"h":37},
+	"frame": {"x":0,"y":0,"w":9,"h":37},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":9,"h":37},
@@ -250,15 +258,23 @@
 },
 "PNG/playerShip1_red.png":
 {
-	"frame": {"x":111,"y":756,"w":99,"h":75},
+	"frame": {"x":174,"y":0,"w":99,"h":75},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":99,"h":75},
 	"sourceSize": {"w":99,"h":75}
 },
+"PNG/Power-ups/shield_silver.png":
+{
+	"frame": {"x":18,"y":0,"w":30,"h":30},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":30,"h":30},
+	"sourceSize": {"w":30,"h":30}
+},
 "PNG/UI/playerLife1_red.png":
 {
-	"frame": {"x":210,"y":756,"w":33,"h":26},
+	"frame": {"x":48,"y":0,"w":33,"h":26},
 	"rotated": false,
 	"trimmed": false,
 	"spriteSourceSize": {"x":0,"y":0,"w":33,"h":26},
@@ -269,8 +285,8 @@
 	"version": "1.0",
 	"image": "sheet.png",
 	"format": "RGBA8888",
-	"size": {"w":500,"h":840},
+	"size": {"w":500,"h":856},
 	"scale": "1",
-	"smartupdate": "$TexturePacker:SmartUpdate:33d6e57a31ecbc1966bbb12eab327ee7:2de58152862315b982861a86c7d2cc2a:9c44ecd7e9a522007eaff2949095bc1d$"
+	"smartupdate": "$TexturePacker:SmartUpdate:2967a8aad77e833f4c67878552423873:4ba7fd24c376b7e13a3187f41df6c1ef:9c44ecd7e9a522007eaff2949095bc1d$"
 }
 }

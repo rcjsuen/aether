@@ -339,8 +339,19 @@ class Game extends Phaser.State {
 	
 	private enemyBulletsGroup: Phaser.Group;
 	private enemies: Phaser.Group;
+
+	/**
+	 * The group of shield power ups.
+	 */
+	private shields: Phaser.Group;
 	private wordsGroup: Phaser.Group;
+
 	private player: Phaser.Sprite = null;
+
+	/**
+	 * The player's shield if one is up and operational.
+	 */
+	private shield: Phaser.Sprite = null;
 	private fire: Phaser.Sound;
 
 	private wordCount: number = 0;
@@ -461,6 +472,8 @@ class Game extends Phaser.State {
 
 		this.enemies = this.game.add.group();
 		this.enemies.enableBody = true;
+		this.shields = this.game.add.group();
+		this.shields.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
 		this.scoreText = this.game.add.text(16, 16,  (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
@@ -719,9 +732,15 @@ class Game extends Phaser.State {
 
 		this.game.physics.arcade.overlap(this.bullets, this.sprites, this.destroy, null, this);
 		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.destroy2, null, this);
+		if (this.shield !== null) {
+			// check for shield collision
+			this.game.physics.arcade.overlap(this.shield, this.sprites, this.shieldDamagedByShip, null, this);
+			this.game.physics.arcade.overlap(this.shield, this.enemyBulletsGroup, this.shieldDamagedByBullet, null, this);
+		}
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
 		this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this)
+		this.game.physics.arcade.overlap(this.player, this.shields, this.grantShield, null, this)
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
@@ -767,6 +786,54 @@ class Game extends Phaser.State {
 	}
 
 	/**
+	 * Create a shield power up at the location of the given enemy if
+	 * the system allows it.
+	 */
+	private createShieldPowerUp(enemy: Phaser.Sprite) {
+		// give enemies a 10% chance of dropping a shield power up
+		if (Math.random() > 0.1) {
+			return;
+		}
+
+		let slope = (this.player.body.y - enemy.body.y) / (this.player.body.x - enemy.body.x);
+		let powerUp = this.shields.create(
+			enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2),
+			'sheet', 'PNG/Power-ups/shield_silver.png');
+		this.game.physics.enable(powerUp);
+		powerUp.anchor.setTo(0.5, 0.5);
+		powerUp.scale.setTo(0.5, 0.5);
+		powerUp.body.velocity.x = 100 / slope; 
+		powerUp.body.velocity.y = 100;
+	}
+
+	/**
+	 * Decrease the shield of the player. If the player's shield's
+	 * health is dropped to zero, it will be destroyed.
+	 */
+	private decreaseShieldHealth() {
+		this.shield.damage(1);
+		this.shield.alpha = this.shield.health / this.shield.maxHealth;
+		if (this.shield.health === 0) {
+			this.shield = null;
+		}
+	}
+
+	private shieldDamagedByShip(shield: Phaser.Sprite, enemy: Phaser.Sprite) {
+		this.decreaseShieldHealth();
+		this.kill(enemy);
+	}
+
+	private shieldDamagedByBullet(shield: Phaser.Sprite, bullet: Phaser.Sprite) {
+		this.decreaseShieldHealth();
+		let index = this.enemyBullets.indexOf(bullet);
+		this.enemyBullets[index].kill();
+		this.enemyLetters[index].kill();
+		this.enemyBullets[index] = null;
+		this.enemyLetters[index] = null;
+		this.targets[index] = null;
+	}
+
+	/**
 	 * Add the given value to the current score.
 	 * 
 	 * @param increment the amount to add to the current total score,
@@ -781,6 +848,7 @@ class Game extends Phaser.State {
 		let index = this.bullets.getChildIndex(bullet);
 		for (let i = 0; i < this.sprites.length; i++) {
 			if (this.sprites[i] === sprite && this.targets[index] === this.sprites[i]) {
+				this.createShieldPowerUp(sprite);
 				this.sprites[i].kill();
 				this.words[i].kill();
 				bullet.kill();
@@ -907,6 +975,27 @@ class Game extends Phaser.State {
 		this.kill(enemy);
 	}
 	
+	/**
+	 * Grants the player a shield.
+	 */
+	private grantShield(player: Phaser.Sprite, powerUp: Phaser.Sprite) {
+		// destroy the power up
+		powerUp.kill();
+		
+		if (this.shield === null) {
+			// shield doesn't exist, then create one
+			this.shield = this.game.add.sprite(this.game.width / 2, 410, 'sheet', 'PNG/Effects/shield3.png');
+			this.shield.maxHealth = 3;
+			this.shield.scale.setTo(0.5, 0.5);
+			this.shield.anchor.setTo(0.5);
+			this.game.physics.enable(this.shield);
+		} else {
+			// shield already exists, reset its alpha state
+			this.shield.alpha = 1;
+		}
+		this.shield.health = 3;
+	}
+
 	private fireBullet(enemy: Phaser.Sprite) {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
 		let bullet = this.bullets.getFirstExists(false);
