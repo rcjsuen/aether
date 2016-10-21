@@ -451,7 +451,7 @@ class Game extends Phaser.State {
 		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
 		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
-		this.player = this.game.add.sprite(this.game.width / 2, 415, 'sheet', 'PNG/playerShip1_red.png');
+		this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
 		this.player.health = 3;
 		this.player.scale.setTo(0.5, 0.5);
 		this.player.anchor.setTo(0.5);
@@ -705,10 +705,10 @@ class Game extends Phaser.State {
 			}
 		}
 
-		if (this.player.body.y < 415) {
+		if (this.player.body.y < 400) {
 			// stop moving the new ship
 			this.player.body.velocity.y = 0;
-			this.player.body.y = 415;
+			this.player.body.y = 400;
 			// scroll the background again now that the ship is in
 			// position
 			this.background.autoScroll(0, 50);
