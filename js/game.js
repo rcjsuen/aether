@@ -49,6 +49,16 @@ var Boot = (function (_super) {
             'assets/audio/8bit_bomb_explosion.ogg',
             'assets/audio/8bit_bomb_explosion.m4a'
         ]);
+        this.load.audio('shieldUp', [
+            'assets/audio/sfx_shieldUp.mp3',
+            'assets/audio/sfx_shieldUp.ogg',
+            'assets/audio/sfx_shieldUp.m4a'
+        ]);
+        this.load.audio('shieldDown', [
+            'assets/audio/sfx_shieldDown.mp3',
+            'assets/audio/sfx_shieldDown.ogg',
+            'assets/audio/sfx_shieldDown.m4a'
+        ]);
     };
     Boot.prototype.create = function () {
         this.game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL;
@@ -313,6 +323,8 @@ var Game = (function (_super) {
         this.game.physics.arcade.enable(this.player);
         this.fire = this.game.add.audio('fire');
         this.explosion = this.game.add.audio('explosion');
+        this.shieldUp = this.game.add.audio('shieldUp');
+        this.shieldDown = this.game.add.audio('shieldDown');
         this.enemies = this.game.add.group();
         this.enemies.enableBody = true;
         this.shields = this.game.add.group();
@@ -592,6 +604,7 @@ var Game = (function (_super) {
         powerUp.body.velocity.y = 100;
     };
     Game.prototype.decreaseShieldHealth = function () {
+        this.shieldDown.play();
         this.shield.damage(1);
         this.shield.alpha = this.shield.health / this.shield.maxHealth;
         if (this.shield.health === 0) {
@@ -710,6 +723,7 @@ var Game = (function (_super) {
     };
     Game.prototype.damageShip = function (player, enemy) {
         this.decreaseHealth();
+        this.animateDeath(enemy);
         this.kill(enemy);
     };
     Game.prototype.damage = function (player, enemyBullet) {
@@ -722,6 +736,7 @@ var Game = (function (_super) {
         this.targets[index] = null;
     };
     Game.prototype.buttonsCollided = function (enemy, button) {
+        this.animateDeath(enemy);
         this.kill(enemy);
     };
     Game.prototype.grantShield = function (player, powerUp) {
@@ -737,6 +752,7 @@ var Game = (function (_super) {
             this.shield.alpha = 1;
         }
         this.shield.health = 3;
+        this.shieldUp.play();
     };
     Game.prototype.fireBullet = function (enemy) {
         var diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
