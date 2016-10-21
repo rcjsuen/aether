@@ -1,3 +1,8 @@
+enum Language {
+	ENGLISH,
+	JAPANESE
+}
+
 class Aether extends Phaser.Game {
 
 	/**
@@ -6,9 +11,14 @@ class Aether extends Phaser.Game {
 	 */
 	private wordManager: WordManager = new WordManager();
 
+	private localization: Localization = new Localization();
+
+	private language: Language = Language.JAPANESE;
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
+		this.state.add('language', LanguageScreen);
 		this.state.add('title', TitleScreen);
 		this.state.add('game', Game);
 		this.state.add('gameover', GameOver);
@@ -19,6 +29,14 @@ class Aether extends Phaser.Game {
 	 */
 	public getWordManager(): WordManager {
 		return this.wordManager;
+	}
+
+	public setLanguage(language: Language): void {
+		this.language = language;
+	}
+
+	public getLocalizedString(key: string): string {
+		return this.localization.getString(this.language, key);
 	}
 
 }
@@ -42,7 +60,53 @@ class Boot extends Phaser.State {
 
 		this.game.plugins.add(Phaser.Plugin.SaveCPU);
 		
-		this.game.state.start('title');
+		this.game.state.start('language');
+	}
+}
+
+class LanguageScreen extends Phaser.State {
+
+	private background: Phaser.TileSprite;
+
+	private englishText: Phaser.Text;
+
+	private japaneseText: Phaser.Text;
+
+	private tilePositionY: number;
+
+	public create(): void {
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.autoScroll(0, 50);
+
+		this.englishText = this.createText(this.game.height / 100 * 45, "English", Language.ENGLISH);
+		this.japaneseText = this.createText(this.game.height / 100 * 55, "日本語", Language.JAPANESE);
+	}
+
+	private createText(y: number, content: string, language: Language): Phaser.Text {
+		let languageText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
+		languageText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		languageText.anchor.setTo(0.5, 0.5);
+		languageText.inputEnabled = true;
+		languageText.events.onInputOver.add(() => {
+			languageText.fill = "#88ff88";
+		});
+		languageText.events.onInputOut.add(() => {
+			languageText.fill = "#ffffff";
+		});
+		languageText.events.onInputDown.add(() => {
+			this.fadeTexts();
+			(this.game as Aether).setLanguage(language);
+			setTimeout(() => {
+				this.tilePositionY = this.background.tilePosition.y;
+				this.game.state.start('title', true, false, this.tilePositionY);
+			}, 1000);
+		});
+		return languageText;
+	}
+
+	private fadeTexts(): void {
+		this.game.add.tween(this.englishText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+		this.game.add.tween(this.japaneseText).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 }
 
@@ -68,6 +132,8 @@ class TitleScreen extends Phaser.State {
 	 */
 	private hardText: Phaser.Text;
 
+	private background: Phaser.TileSprite;
+
 	/**
 	 * The difficulty of the game that the user has selected.
 	 */
@@ -84,21 +150,27 @@ class TitleScreen extends Phaser.State {
 	 */
 	private timeElapsed: number = -1;
 
-	public init(): void {
+	private tilePositionY: number;
+
+	public init(tilePositionY: number): void {
 		this.timeElapsed = -1;
+		this.tilePositionY = tilePositionY;
 	}
 
 	public create(): void {
-		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
-		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.background.tilePosition.y = this.tilePositionY;
+		this.background.autoScroll(0, 50);
 
 		this.titleText = this.game.add.text(this.game.width / 2, this.game.height / 4, "Aether",  { fontSize: '64px', fill: '#ffffff' });
 		this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.titleText.anchor.setTo(0.5, 0.5);
 
-		this.easyText = this.createText("Easy", 300, Difficulty.EASY);
-		this.normalText = this.createText("Normal", 350, Difficulty.NORMAL);
-		this.hardText = this.createText("Hard", 400, Difficulty.HARD);
+		
+		let aether = this.game as Aether;
+		this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+		this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+		this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
 		
 		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
@@ -109,11 +181,12 @@ class TitleScreen extends Phaser.State {
 	/**
 	 * Fade out the texts on the screen.
 	 */
-	private fadeTexts(): void {
+	private fadeOut(): void {
 		this.applyFade(this.titleText);
 		this.applyFade(this.easyText);
 		this.applyFade(this.normalText);
 		this.applyFade(this.hardText);
+		this.applyFade(this.background);
 	}
 
 	/**
@@ -121,8 +194,8 @@ class TitleScreen extends Phaser.State {
 	 * 
 	 * @param text the text to fade out
 	 */
-	private applyFade(text: Phaser.Text): void {
-		this.game.add.tween(text).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
+	private applyFade(sprite: PIXI.Sprite): void {
+		this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 
 	private createText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
@@ -146,7 +219,7 @@ class TitleScreen extends Phaser.State {
 	public update(): void {
 		if (this.ship !== null && !this.ship.inWorld) {
 			this.timeElapsed = this.game.time.time;
-			this.fadeTexts();
+			this.fadeOut();
 			this.ship.kill();
 			this.ship = null;
 		}
@@ -160,7 +233,7 @@ class TitleScreen extends Phaser.State {
 
 enum Difficulty {
 	EASY,
-	NORMAL,
+	MEDIUM,
 	HARD
 }
 
@@ -390,7 +463,7 @@ class Game extends Phaser.State {
 		this.enemies.enableBody = true;
 		this.wordsGroup = this.game.add.group();
 
-		this.scoreText = this.game.add.text(16, 16, "Score: " + this.score, { fontSize: '16px', fill: '#ffffff' });
+		this.scoreText = this.game.add.text(16, 16,  (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
 		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
 		this.inputText.anchor.setTo(0.5, 0.5);
 
@@ -701,7 +774,7 @@ class Game extends Phaser.State {
 	 */
 	private updateScore(increment: number) {
 		this.score += increment;
-		this.scoreText.text = "Score: " + this.score;
+		this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score;
 	}
 
 	private destroy(sprite, bullet) {
@@ -889,18 +962,28 @@ class GameOver extends Phaser.State {
 	}
 
 	public create(): void {
+		let aether = (this.game as Aether);
 		let bg = this.game.add.sprite(0, 0, 'sheet', 'Backgrounds/purple.png');
 		bg.scale.setTo(this.game.width / bg.width, this.game.height / bg.height);
 
-		let gameOverText = this.game.add.text(this.game.width / 2, this.game.height / 3, "Game Over",  { fontSize: '64px', fill: '#ffffff' });
+		let gameOverText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 2,
+			aether.getLocalizedString(GAME_OVER),
+			{ fontSize: '48px', fill: '#ffffff' });
 		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		gameOverText.anchor.setTo(0.5, 0.5);
 
-		this.scoreText = this.game.add.text(this.game.width / 2, this.game.height / 2, "Score: 0",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		this.scoreText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 5,
+			aether.getLocalizedString(SCORE) + ": 0",
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
 		this.scoreText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		this.scoreText.anchor.setTo(0.5, 0.5);
 
-		let titleText = this.game.add.text(this.game.width / 2, this.game.height / 3 * 2, "Return to the\nTitle Screen",  { fontSize: '28px', fill: '#ffffff', align: 'center' });
+		let titleText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 7,
+			aether.getLocalizedString(RETURN_MAIN),
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
 		titleText.inputEnabled = true;
 		titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		titleText.anchor.setTo(0.5, 0.5);
@@ -924,7 +1007,7 @@ class GameOver extends Phaser.State {
 				this.current = this.score;
 			}
 			// don't show decimals to the user
-			this.scoreText.text = "Score: " + Math.floor(this.current);
+			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.current;
 		}
 	}
 }
@@ -1132,6 +1215,44 @@ class WordManager {
 		}
 	}
 
+}
+
+const EASY = "EASY";
+const MEDIUM = "MEDIUM";
+const HARD = "HARD";
+const SCORE = "SCORE";
+const RETURN_MAIN = "RETURN_MAIN";
+const GAME_OVER = "GAME_OVER";
+
+class Localization {
+
+	english = {
+		EASY: "Easy",
+		MEDIUM: "Medium",
+		HARD: "Hard",
+		SCORE: "Score",
+		RETURN_MAIN: "Return to Main Menu",
+		GAME_OVER: "Game Over"
+	};
+
+	japanese = {
+		EASY: "易しい",
+		MEDIUM: "普通",
+		HARD: "難しい",
+		SCORE: "スコア",
+		RETURN_MAIN: "メインメニューに戻る",
+		GAME_OVER: "ゲームオーバー"
+	};
+
+	public getString(language: Language, key: string): string {
+		switch (language) {
+			case Language.ENGLISH:
+				return this.english[key];
+			case Language.JAPANESE:
+				return this.japanese[key];
+		}
+		return null;
+	}
 }
 
 window.onload = () => {
