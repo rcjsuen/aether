@@ -834,7 +834,8 @@ class Game extends Phaser.State {
 	private decreaseShieldHealth() {
 		this.shieldDown.play();
 		this.shield.damage(1);
-		this.shield.alpha = this.shield.health / this.shield.maxHealth;
+		let alpha = this.shield.health / this.shield.maxHealth;
+		this.game.add.tween(this.shield).to({ alpha: alpha }, 1000, Phaser.Easing.Linear.None, true);
 		if (this.shield.health === 0) {
 			this.shield = null;
 		}
@@ -1028,9 +1029,12 @@ class Game extends Phaser.State {
 			this.shield.scale.setTo(0.5, 0.5);
 			this.shield.anchor.setTo(0.5);
 			this.game.physics.enable(this.shield);
+
+			this.shield.alpha = 0;
+			this.game.add.tween(this.shield).to({ alpha: 1 }, 1000, Phaser.Easing.Linear.None, true);
 		} else {
 			// shield already exists, reset its alpha state
-			this.shield.alpha = 1;
+			this.game.add.tween(this.shield).to({ alpha: 1 }, 1000, Phaser.Easing.Linear.None, true);
 		}
 		this.shield.health = 3;
 		this.shieldUp.play();
