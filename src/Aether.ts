@@ -928,7 +928,7 @@ class Game extends Phaser.State {
 
 	private endGame(): void {
 		window.removeEventListener("keydown", this.backspaceListener, false);
-		this.game.state.start('gameover', true, false, this.score);
+		this.game.state.start('gameover', true, false, this.difficulty, this.score);
 	}
 
 }
@@ -939,6 +939,8 @@ class GameOver extends Phaser.State {
 	 * The text field to display the user's score.
 	 */
 	private scoreText: Phaser.Text;
+
+	private difficultyKey: string;
 
 	/**
 	 * The user's score.
@@ -956,7 +958,18 @@ class GameOver extends Phaser.State {
 	 */
 	private increment: number;
 
-	public init(score: number) {
+	public init(difficulty: Difficulty, score: number) {
+		switch (difficulty) {
+			case Difficulty.EASY:
+				this.difficultyKey = DIFFICULTY_EASY;
+				break;
+			case Difficulty.MEDIUM:
+				this.difficultyKey = DIFFICULTY_MEDIUM;
+				break;
+			case Difficulty.HARD:
+				this.difficultyKey = DIFFICULTY_HARD;
+				break;
+		}
 		this.score = score;
 		this.increment = this.score / 100;
 	}
@@ -972,6 +985,13 @@ class GameOver extends Phaser.State {
 			{ fontSize: '48px', fill: '#ffffff' });
 		gameOverText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		gameOverText.anchor.setTo(0.5, 0.5);
+
+		let difficultyText = this.game.add.text(
+			this.game.width / 2, this.game.height / 10 * 4,
+			aether.getLocalizedString(this.difficultyKey),
+			{ fontSize: '28px', fill: '#ffffff', align: 'center' });
+		difficultyText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		difficultyText.anchor.setTo(0.5, 0.5);
 
 		this.scoreText = this.game.add.text(
 			this.game.width / 2, this.game.height / 10 * 5,
@@ -1220,6 +1240,9 @@ class WordManager {
 const EASY = "EASY";
 const MEDIUM = "MEDIUM";
 const HARD = "HARD";
+const DIFFICULTY_EASY = "DIFFICULTY_EASY";
+const DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
+const DIFFICULTY_HARD = "DIFFICULTY_HARD";
 const SCORE = "SCORE";
 const RETURN_MAIN = "RETURN_MAIN";
 const GAME_OVER = "GAME_OVER";
@@ -1230,6 +1253,9 @@ class Localization {
 		EASY: "Easy",
 		MEDIUM: "Medium",
 		HARD: "Hard",
+		DIFFICULTY_EASY: "Difficulty: Easy",
+		DIFFICULTY_MEDIUM: "Difficulty: Medium",
+		DIFFICULTY_HARD: "Difficulty: Hard",
 		SCORE: "Score",
 		RETURN_MAIN: "Return to Main Menu",
 		GAME_OVER: "Game Over"
@@ -1239,6 +1265,9 @@ class Localization {
 		EASY: "易しい",
 		MEDIUM: "普通",
 		HARD: "難しい",
+		DIFFICULTY_EASY: "難易度: 易しい",
+		DIFFICULTY_MEDIUM: "難易度: 普通",
+		DIFFICULTY_HARD: "難易度: 難しい",
 		SCORE: "スコア",
 		RETURN_MAIN: "メインメニューに戻る",
 		GAME_OVER: "ゲームオーバー"
