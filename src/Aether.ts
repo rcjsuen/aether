@@ -842,6 +842,7 @@ class Game extends Phaser.State {
 
 	private shieldDamagedByShip(shield: Phaser.Sprite, enemy: Phaser.Sprite) {
 		this.decreaseShieldHealth();
+		this.animateDeath(enemy);
 		this.kill(enemy);
 	}
 
@@ -986,6 +987,7 @@ class Game extends Phaser.State {
 
 	private damageShip(player: Phaser.Sprite, enemy: Phaser.Sprite) {
 		this.decreaseHealth();
+		this.animateDeath(enemy);
 		this.kill(enemy);
 	}
 
@@ -1008,6 +1010,7 @@ class Game extends Phaser.State {
 	 * @param button the keyboard button sprite model
 	 */
 	private buttonsCollided(enemy: Phaser.Sprite, button: Phaser.Sprite) {
+		this.animateDeath(enemy);
 		this.kill(enemy);
 	}
 	
