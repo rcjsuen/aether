@@ -955,6 +955,7 @@ class Game extends Phaser.State {
 	private decreaseHealth() {
 		if (this.player.health === 1) {
 			this.haltEnemySpawns = true;
+			this.inputText.text = "";
 			this.background.autoScroll(0, 0);
 
 			this.player.health = 3;
