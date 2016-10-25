@@ -780,8 +780,7 @@ class Game extends Phaser.State {
 			enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
 			enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope; 
 
-			var index = Math.floor(Math.random() * 26);
-			var letter = this.game.add.text(0, 0, this.keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
+			let letter = this.game.add.text(0, 0, this.wordManager.getRandomLetter(), { font: 'bold 16pt Arial', fill: "#88FF88" });
 			letter.anchor.set(0.5);
 			letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 			this.enemyLetters[letterIndex] = letter;
@@ -1368,6 +1367,16 @@ class WordManager {
 		} else {
 			return this.english[index];
 		}
+	}
+
+	/**
+	 * Returns a random lowercased letter from the English alphabet.
+	 * 
+	 * @return a random lowercased letter in the English alphabet 
+	 */
+	public getRandomLetter(): string {
+		let index = Math.floor(Math.random() * 26);
+		return this.alphabet[index];
 	}
 
 }
