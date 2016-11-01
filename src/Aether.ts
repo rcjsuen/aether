@@ -20,7 +20,8 @@ class Aether extends Phaser.Game {
 		this.state.add('boot', Boot, true);
 		this.state.add('language', LanguageScreen);
 		this.state.add('title', TitleScreen);
-		this.state.add('game', Game);
+		this.state.add('level', Level);
+		this.state.add('boss', BossStage);
 		this.state.add('gameover', GameOver);
 	}
 
@@ -240,7 +241,7 @@ class TitleScreen extends Phaser.State {
 		}
 
 		if (this.timeElapsed !== -1 && this.game.time.time > this.timeElapsed + 1000) {
-			this.game.state.start('game', true, false, this.difficulty);
+			this.game.state.start('level', true, false, this.difficulty);
 		}
 	}
 
@@ -268,67 +269,27 @@ const ENEMY_BULLET_MOVE_SPEED = 40;
  */
 const ENEMY_MOVE_SPEED_FACTOR = 5;
 
-class Game extends Phaser.State {
-	
+abstract class Stage extends Phaser.State {
 	private phaserKeys = [
-		Phaser.Keyboard.A,
-		Phaser.Keyboard.B,
-		Phaser.Keyboard.C,
-		Phaser.Keyboard.D,
-		Phaser.Keyboard.E,
-		Phaser.Keyboard.F,
-		Phaser.Keyboard.G,
-		Phaser.Keyboard.H,
-		Phaser.Keyboard.I,
-		Phaser.Keyboard.J,
-		Phaser.Keyboard.K,
-		Phaser.Keyboard.L,
-		Phaser.Keyboard.M,
-		Phaser.Keyboard.N,
-		Phaser.Keyboard.O,
-		Phaser.Keyboard.P,
-		Phaser.Keyboard.Q,
-		Phaser.Keyboard.R,
-		Phaser.Keyboard.S,
-		Phaser.Keyboard.T,
-		Phaser.Keyboard.U,
-		Phaser.Keyboard.V,
-		Phaser.Keyboard.W,
-		Phaser.Keyboard.X,
-		Phaser.Keyboard.Y,
-		Phaser.Keyboard.Z
+		Phaser.Keyboard.A, Phaser.Keyboard.B, Phaser.Keyboard.C, Phaser.Keyboard.D, Phaser.Keyboard.E, Phaser.Keyboard.F,
+		Phaser.Keyboard.G, Phaser.Keyboard.H, Phaser.Keyboard.I, Phaser.Keyboard.J, Phaser.Keyboard.K,
+		Phaser.Keyboard.L, Phaser.Keyboard.M, Phaser.Keyboard.N, Phaser.Keyboard.O, Phaser.Keyboard.P,
+		Phaser.Keyboard.Q, Phaser.Keyboard.R, Phaser.Keyboard.S, Phaser.Keyboard.T, Phaser.Keyboard.U,
+		Phaser.Keyboard.V, Phaser.Keyboard.W, Phaser.Keyboard.X, Phaser.Keyboard.Y, Phaser.Keyboard.Z
 	];
 
-		private keys: string[] = [
-		'a',
-		'b',
-		'c',
-		'd',
-		'e',
-		'f',
-		'g',
-		'h',
-		'i',
-		'j',
-		'k',
-		'l',
-		'm',
-		'n',
-		'o',
-		'p',
-		'q',
-		'r',
-		's',
-		't',
-		'u',
-		'v',
-		'w',
-		'x',
-		'y',
-		'z',
+	private keys: string[] = [
+		'a', 'b', 'c', 'd', 'e', 'f',
+		'g', 'h', 'i', 'j', 'k',
+		'l', 'm', 'n', 'o', 'p',
+		'q', 'r', 's', 't', 'u',
+		'v', 'w', 'x', 'y', 'z',
 	];
 
-	private waitTime: number = 5000;
+	/**
+	 * The background sprite that is tiled and moving.
+	 */
+	private background: Phaser.TileSprite;
 
 	/**
 	 * The text field to display the user's score.
@@ -338,40 +299,342 @@ class Game extends Phaser.State {
 	/**
 	 * The user's current score.
 	 */
-	private score: number = 0;
-
-	/**
-	 * The background sprite that is tiled and moving.
-	 */
-	private background: Phaser.TileSprite;
+	protected score: number = 0;
 
 	/**
 	 * The text field where the user's input will be displayed with.
 	 */
-	private inputText: Phaser.Text;
-	private buttons: Phaser.Group;
-	private bullets: Phaser.Group;
-	
-	private enemyBulletsGroup: Phaser.Group;
-	private enemies: Phaser.Group;
+	protected inputText: Phaser.Text;
+
+	private shiftState: boolean = false;
+
+	/**
+	 * The sprites that represent the player's remaining number of
+	 * lives.
+	 */
+	private lives: Phaser.Sprite[] = [];
+
+	protected buttons: Phaser.Group;
 
 	/**
 	 * The group of shield power ups.
 	 */
-	private shields: Phaser.Group;
-	private wordsGroup: Phaser.Group;
+	protected shields: Phaser.Group;
 
-	private player: Phaser.Sprite = null;
+	protected player: Phaser.Sprite = null;
 
 	/**
 	 * The player's shield if one is up and operational.
 	 */
-	private shield: Phaser.Sprite = null;
-	private fire: Phaser.Sound;
-	private explosion: Phaser.Sound;
-	private shieldUp: Phaser.Sound;
-	private shieldDown: Phaser.Sound;
+	protected shield: Phaser.Sprite = null;
 
+	private initialShieldHealth: number = 0;
+	
+	protected bullets: Phaser.Group;
+
+	protected enemies: Phaser.Group = null;
+
+	protected enemyBulletsGroup: Phaser.Group;
+	
+	protected fire: Phaser.Sound;
+	protected explosion: Phaser.Sound;
+	protected shieldUp: Phaser.Sound;
+	protected shieldDown: Phaser.Sound;
+
+	/**
+	 * The listener to prevent the 'Backspace' key from moving back in
+	 * the browser's history. The key should instead be used for
+	 * removing the user's input into the game.9
+	 */
+	private backspaceListener;
+
+	protected difficulty: Difficulty;
+
+	public preload() {
+		this.backspaceListener = (event) => {
+			if (event.keyCode == 8) {
+				event.preventDefault();
+				if (this.inputText.text.length > 0) {
+					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
+				}
+			}
+		};
+		window.addEventListener("keydown", this.backspaceListener, false);
+	}
+
+	public setInitialShieldHealth(initialShieldHealth: number) {
+		this.initialShieldHealth = initialShieldHealth;
+	}
+
+	private createAudio(): void {
+		this.fire = this.game.add.audio('fire');
+		this.explosion = this.game.add.audio('explosion');
+		this.explosion.volume = 0.1;
+		this.shieldUp = this.game.add.audio('shieldUp');
+		this.shieldDown = this.game.add.audio('shieldDown');
+	}
+
+	private createBackground(): void {
+		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
+		this.startScrolling();
+	}
+
+	private createScoreText(): void {
+		this.scoreText = this.game.add.text(16, 16,  (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
+	}
+
+	/**
+	 * Add the given value to the current score.
+	 * 
+	 * @param increment the amount to add to the current total score,
+	 * must be a positive number
+	 */
+	protected updateScore(increment: number) {
+		this.score += increment;
+		this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score;
+	}
+
+	private createInputText(): void {
+		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
+		this.inputText.anchor.setTo(0.5, 0.5);
+	}
+
+	private createLives(): void {
+		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+	}
+
+	private createPlayer(): void {
+		this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
+		this.player.health = 3;
+		this.player.scale.setTo(0.5, 0.5);
+		this.player.anchor.setTo(0.5);
+		this.game.physics.arcade.enable(this.player);
+	}
+
+	private createKeys() {
+		this.buttons = this.game.add.group();
+		this.buttons.enableBody = true;
+
+		var scaling = 0.45;
+		var scalingY = 0.50;
+		var initialOffsetX = 0;
+		var initialOffsetY = 480;
+		var offset = 30 + 5;
+
+		let row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
+		let row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
+		let row3 = [ 'Z', 'X', 'C', 'V', 'B', 'N', 'M' ];
+
+		for (let i = 0; i < row.length; i++) {
+			let button = this.buttons.create(initialOffsetX + (offset * i), initialOffsetY, 'sheet', 'keyboard/letters/Keyboard_White_' + row[i] + '.png');
+			button.scale.setTo(scaling, scalingY);
+			button.inputEnabled = true;
+			let character = row[i];
+			button.events.onInputDown.add(this.internalTyped(character), this);
+		}
+		
+		for (let i = 0; i < row2.length; i++) {
+			let button = this.buttons.create(initialOffsetX + 18 + (offset * i), initialOffsetY + 50, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
+			button.scale.setTo(scaling, scalingY);
+			button.inputEnabled = true;
+			let character = row2[i];
+			button.events.onInputDown.add(this.internalTyped(character), this);
+		}
+		
+		for (let i = 0; i < row3.length; i++) {
+			let button = this.buttons.create(initialOffsetX + 35 + (offset * i), initialOffsetY + 100, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
+			button.scale.setTo(scaling, scalingY);
+			button.inputEnabled = true;
+			let character = row3[i];
+			button.events.onInputDown.add(this.internalTyped(character), this);
+		}
+
+		let shiftButton = this.buttons.create(initialOffsetX, initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Arrow_Up.png');
+		shiftButton.scale.setTo(scaling, scalingY);
+		shiftButton.inputEnabled = true;
+		shiftButton.events.onInputDown.add(function() {
+			this.shiftState = !this.shiftState;
+		}, this);
+
+		let backspaceButton = this.buttons.create(initialOffsetX + 40 + (offset * 7), initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
+		backspaceButton.scale.setTo(scaling, scalingY);
+		backspaceButton.inputEnabled = true;
+		backspaceButton.events.onInputDown.add(function() {
+			if (this.inputText.text.length > 0) {
+				this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
+			}
+		}, this);
+	}
+
+	private internalTyped(character: string): Function {
+		return () => {
+			this.typed(this.shiftState ? character.toUpperCase() : character.toLowerCase());
+			this.shiftState = false;
+		};
+	}
+
+	protected abstract typed(character: string): void;
+
+	protected createBackgroundAssets(): void {
+		this.createAudio();
+		this.createBackground();
+	}
+
+	public createUI(): void {
+		this.createScoreText();
+		this.createInputText();
+		this.createLives();
+
+		this.createPlayer();
+		if (this.initialShieldHealth !== 0) {
+			this.grantShield(this.initialShieldHealth);
+		}
+		this.shields = this.game.add.group();
+		this.shields.enableBody = true;
+		this.enemies = this.game.add.group();
+		this.enemies.enableBody = true;
+
+		this.bullets = this.game.add.physicsGroup();
+		this.bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
+		this.bullets.setAll('checkWorldBounds', true);
+		this.bullets.setAll('outOfBoundsKill', true);
+
+		this.enemyBulletsGroup = this.game.add.physicsGroup();
+		this.enemyBulletsGroup.createMultiple(32,　'sheet', 'PNG/Lasers/laserGreen13.png', false);
+		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
+		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
+
+		this.createKeys();
+		
+		for (let i = 0; i < this.keys.length; i++) {
+			let key = this.game.input.keyboard.addKey(this.phaserKeys[i]);
+			let character = this.keys[i];
+			key.onDown.add(this.internalTyped(character), this);
+		}
+
+		let key = this.game.input.keyboard.addKey(Phaser.Keyboard.SHIFT);
+		key.onDown.add(() => {
+			this.shiftState = true;
+		}, this);
+		key.onUp.add(() => {
+			this.shiftState = false;
+		}, this);
+	}
+
+	protected stopScrolling(): void {
+		this.background.autoScroll(0, 0);
+	}
+
+	protected startScrolling(): void {
+		this.background.autoScroll(0, 50);
+	}
+
+	/**
+	 * Create a shield power up at the location of the given enemy if
+	 * the system allows it.
+	 */
+	protected createShieldPowerUp(enemy: Phaser.Sprite) {
+		// give enemies a 10% chance of dropping a shield power up
+		if (Math.random() > 0.1) {
+			return;
+		}
+
+		let slope = (this.player.body.y - enemy.body.y) / (this.player.body.x - enemy.body.x);
+		let powerUp = this.shields.create(
+			enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2),
+			'sheet', 'PNG/Power-ups/shield_silver.png');
+		this.game.physics.enable(powerUp);
+		powerUp.anchor.setTo(0.5, 0.5);
+		powerUp.scale.setTo(0.5, 0.5);
+		powerUp.body.velocity.x = 100 / slope; 
+		powerUp.body.velocity.y = 100;
+	}
+
+	/**
+	 * Grants the player a shield with the given health.
+	 */
+	protected grantShield(health: number): boolean {
+		if (this.shield === null) {
+			// shield doesn't exist, create one
+			this.shield = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/Effects/shield3.png');
+			this.shield.maxHealth = 3;
+			this.shield.scale.setTo(0.5, 0.5);
+			this.shield.anchor.setTo(0.5);
+			this.game.physics.enable(this.shield);
+			this.shield.alpha = health / 3;
+			return true;
+		}
+		this.shield.health = health;
+		this.shield.alpha = health / 3;
+		return false;
+	}
+	
+	/**
+	 * Grants the player a shield.
+	 */
+	protected grantShieldFromPowerUp(player: Phaser.Sprite, powerUp: Phaser.Sprite) {
+		// destroy the power up
+		powerUp.kill();
+
+		if (this.grantShield(3)) {
+			this.shield.alpha = 0;
+		}
+		this.game.add.tween(this.shield).to({ alpha: 1 }, 1000, Phaser.Easing.Linear.None, true);
+		this.shieldUp.play();
+	}
+
+	/**
+	 * Decrease the shield of the player. If the player's shield's
+	 * health is dropped to zero, it will be destroyed.
+	 */
+	protected decreaseShieldHealth() {
+		this.shieldDown.play();
+		this.shield.damage(1);
+		let alpha = this.shield.health / this.shield.maxHealth;
+		this.game.add.tween(this.shield).to({ alpha: alpha }, 1000, Phaser.Easing.Linear.None, true);
+		if (this.shield.health === 0) {
+			this.shield = null;
+		}
+	}
+
+	protected animateDeath(enemy: Phaser.Sprite) {
+		let smoke = this.game.add.sprite(enemy.body.x + (enemy.body.width / 2),
+			enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Effects/spaceEffects_016.png');
+		smoke.anchor.setTo(0.5, 0.5);
+		smoke.animations.add('run',
+			[ 'PNG/Effects/spaceEffects_015.png', 'PNG/Effects/spaceEffects_014.png', 'PNG/Effects/spaceEffects_013.png',
+			'PNG/Effects/spaceEffects_012.png', 'PNG/Effects/spaceEffects_011.png', 'PNG/Effects/spaceEffects_010.png',
+			'PNG/Effects/spaceEffects_009.png', 'PNG/Effects/spaceEffects_008.png', ],
+			10, false);
+		smoke.animations.play('run', 10, false, true);
+		this.explosion.play();
+	}
+
+	protected loseLife(): boolean {
+		if (this.lives.length > 0) {
+			this.lives[this.lives.length - 1].kill();
+			this.lives.splice(this.lives.length - 1, 1);
+			return true;
+		}
+		this.endGame();
+		return false;
+	}
+
+	protected endGame(): void {
+		this.game.state.start('gameover', true, false, this.difficulty, this.score);
+	}
+
+	public shutdown(): void {
+		window.removeEventListener("keydown", this.backspaceListener, false);
+	}
+
+}
+
+class Level extends Stage {
+
+	private waitTime: number = 5000;
+	
 	private wordCount: number = 0;
 
 	private words: Phaser.Text[] = [];
@@ -383,17 +646,9 @@ class Game extends Phaser.State {
 	private targets: Phaser.Sprite[] = [];
 
 	/**
-	 * The sprites that represent the player's remaining number of
-	 * lives.
-	 */
-	private lives: Phaser.Sprite[] = [];
-
-	/**
 	 * The level that the user is currently on.
 	 */
 	private level: number = 1;
-
-	private difficulty: Difficulty;
 
 	/**
 	 * Whether the game has finished or not.
@@ -407,13 +662,6 @@ class Game extends Phaser.State {
 
 	private wordManager: WordManager;
 
-	/**
-	 * The listener to prevent the 'Backspace' key from moving back in
-	 * the browser's history. The key should instead be used for
-	 * removing the user's input into the game.9
-	 */
-	private backspaceListener;
-
 	public init(difficulty: Difficulty) {
 		this.wordManager = (this.game as Aether).getWordManager();
 		if (this.player !== null) {
@@ -423,7 +671,7 @@ class Game extends Phaser.State {
 			this.enemies.forEach((sprite) => {
 				sprite.kill();
 			}, this);
-			this.wordsGroup.forEach((sprite) => {
+			this.words.forEach((sprite) => {
 				sprite.kill();
 			}, this);
 
@@ -436,7 +684,7 @@ class Game extends Phaser.State {
 			this.player.kill();
 
 			this.wordCount = 0;
-			this.level = 0;
+			this.level = 1;
 			this.score = 0;
 			this.finished = false;
 			this.words = [];
@@ -454,115 +702,11 @@ class Game extends Phaser.State {
 		this.wordManager.shouldUseWords(difficulty !== Difficulty.EASY);
 	}
 
-	public preload() {
-		this.backspaceListener = (event) => {
-			if (event.keyCode == 8) {
-				event.preventDefault();
-				if (this.inputText.text.length > 0) {
-					this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
-				}
-			}
-		};
-		window.addEventListener("keydown", this.backspaceListener, false);
-	}
-
 	public create() {
-		this.background = this.game.add.tileSprite(0, 0, this.game.width, this.game.height, 'sheet', 'Backgrounds/purple.png');
-		this.background.autoScroll(0, 50);
+		this.createBackgroundAssets();
+		this.createUI();
 
-		this.bullets = this.game.add.physicsGroup();
-		this.bullets.createMultiple(32,　'sheet', 'PNG/Lasers/laserBlue01.png', false);
-		this.bullets.setAll('checkWorldBounds', true);
-		this.bullets.setAll('outOfBoundsKill', true);
-
-		this.enemyBulletsGroup = this.game.add.physicsGroup();
-		this.enemyBulletsGroup.createMultiple(32,　'sheet', 'PNG/Lasers/laserGreen13.png', false);
-		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
-		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
-
-		this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
-		this.player.health = 3;
-		this.player.scale.setTo(0.5, 0.5);
-		this.player.anchor.setTo(0.5);
-		this.game.physics.arcade.enable(this.player);
-
-		this.fire = this.game.add.audio('fire');
-		this.explosion = this.game.add.audio('explosion');
-		this.shieldUp = this.game.add.audio('shieldUp');
-		this.shieldDown = this.game.add.audio('shieldDown');
-
-		this.enemies = this.game.add.group();
-		this.enemies.enableBody = true;
-		this.shields = this.game.add.group();
-		this.shields.enableBody = true;
-		this.wordsGroup = this.game.add.group();
-
-		this.scoreText = this.game.add.text(16, 16,  (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score, { fontSize: '16px', fill: '#ffffff' });
-		this.inputText = this.game.add.text(this.game.width /  2, 460, null, { align: 'center', fontSize: '32px', fill: '#ffffff' });
-		this.inputText.anchor.setTo(0.5, 0.5);
-
-		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
-		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
-
-		this.buttons = this.game.add.group();
-		this.buttons.enableBody = true;
-		this.createKeys();
 		this.gameTime = this.game.time.time;
-
-		for (var i = 0; i < this.keys.length; i++) {
-			var key = this.game.input.keyboard.addKey(this.phaserKeys[i]);
-			var character = this.keys[i];
-			key.onDown.add(this.typed(character), this);
-		}
-	}
-
-	private append(char) {
-		this.inputText.text = this.inputText.text + char;
-	}
-
-	private createKeys() {
-		var scaling = 0.45;
-		var scalingY = 0.50;
-		var initialOffsetX = 0;
-		var initialOffsetY = 480;
-		var offset = 30 + 5;
-
-		var row = [ 'Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P' ];
-		var row2 = [ 'A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L' ];
-		var row3 = [ 'Z', 'X', 'C', 'V', 'B', 'N', 'M' ];
-
-		for (var i = 0; i < row.length; i++) {
-			var button = this.buttons.create(initialOffsetX + (offset * i), initialOffsetY, 'sheet', 'keyboard/letters/Keyboard_White_' + row[i] + '.png');
-			button.scale.setTo(scaling, scalingY);
-			button.inputEnabled = true;
-			var character = row[i];
-			button.events.onInputDown.add(this.typed(character.toLowerCase()), this);
-		}
-		
-		for (var i = 0; i < row2.length; i++) {
-			var button = this.buttons.create(initialOffsetX + 18 + (offset * i), initialOffsetY + 50, 'sheet', 'keyboard/letters/Keyboard_White_' + row2[i] + '.png');
-			button.scale.setTo(scaling, scalingY);
-			button.inputEnabled = true;
-			var character = row2[i];
-			button.events.onInputDown.add(this.typed(character.toLowerCase()), this);
-		}
-		
-		for (var i = 0; i < row3.length; i++) {
-			var button = this.buttons.create(initialOffsetX + 35 + (offset * i), initialOffsetY + 100, 'sheet', 'keyboard/letters/Keyboard_White_' + row3[i] + '.png');
-			button.scale.setTo(scaling, scalingY);
-			button.inputEnabled = true;
-			var character = row3[i];
-			button.events.onInputDown.add(this.typed(character.toLowerCase()), this);
-		}
-
-		var backspaceButton = this.buttons.create(initialOffsetX + 40 + (offset * 7), initialOffsetY + 100, 'sheet', 'keyboard/functions/Keyboard_White_Backspace_Alt.png');
-		backspaceButton.scale.setTo(scaling, scalingY);
-		backspaceButton.inputEnabled = true;
-		backspaceButton.events.onInputDown.add(function() {
-			if (this.inputText.text.length > 0) {
-				this.inputText.text = this.inputText.text.substring(0, this.inputText.text.length - 1);
-			}
-		}, this);
 	}
 
 	private intercept(character): boolean {
@@ -603,37 +747,35 @@ class Game extends Phaser.State {
 		return false;
 	}
 
-	private typed(character) {
-		return () => {
-			if (this.difficulty === Difficulty.EASY) {
-				// on Easy mode, process all characters immediately
-				let word = this.wordManager.completed(character);
-				if (word !== null) {
-					for (let i = 0; i < this.words.length; i++) {
-						if (this.words[i] !== null && this.words[i].text === word) {
-							this.words[i].fill = "#ff8888";
-							this.fireBullet(this.sprites[i]);
-							break;
-						}
+	protected typed(character): void {
+		if (this.difficulty === Difficulty.EASY) {
+			// on Easy mode, process all characters immediately
+			let word = this.wordManager.completed(character);
+			if (word !== null) {
+				for (let i = 0; i < this.words.length; i++) {
+					if (this.words[i] !== null && this.words[i].text === word) {
+						this.words[i].fill = "#ff8888";
+						this.fireBullet(this.sprites[i]);
+						break;
 					}
 				}
-			} else {
-				let prefix = this.inputText.text + character;
-				if ((prefix.length === 1 && this.intercept(character)) ||
-						!this.wordManager.isValidPrefix(prefix)) {
-					return;
-				}
+			}
+		} else {
+			let prefix = this.inputText.text + character;
+			if ((prefix.length === 1 && this.intercept(character)) ||
+					!this.wordManager.isValidPrefix(prefix)) {
+				return;
+			}
 
-				this.inputText.text = prefix;
-				let word = this.wordManager.completed(this.inputText.text);
-				if (word !== null) {
-					for (let i = 0; i < this.words.length; i++) {
-						if (this.words[i] !== null && this.words[i].text === word) {
-							this.words[i].fill = "#ff8888";
-							this.fireBullet(this.sprites[i]);
-							this.inputText.text = "";
-							break;
-						}
+			this.inputText.text = prefix;
+			let word = this.wordManager.completed(this.inputText.text);
+			if (word !== null) {
+				for (let i = 0; i < this.words.length; i++) {
+					if (this.words[i] !== null && this.words[i].text === word) {
+						this.words[i].fill = "#ff8888";
+						this.fireBullet(this.sprites[i]);
+						this.inputText.text = "";
+						break;
 					}
 				}
 			}
@@ -661,8 +803,9 @@ class Game extends Phaser.State {
 
 			if (cleared) {
 				// all the enemies and lasers have been destroyed,
-				// the game is over
-				this.endGame();
+				// go fight the boss
+				let shieldHealth = this.shield === null ? 0 : this.shield.health;
+				this.game.state.start('boss', true, false, this.difficulty, this.score, shieldHealth);
 				return;
 			}
 		}
@@ -694,16 +837,8 @@ class Game extends Phaser.State {
 			// no words left, move to the next set
 			if (word === null) {
 				if (this.difficulty === Difficulty.EASY || !this.wordManager.goToNextSet()) {
-					// can't move forward anymore, go to the next level
-					this.level++;
-					this.wordCount = 0;
-					if (this.level === 6) {
-						// end the game after five levels
-						this.finished = true;
-					} else {
-						this.wordManager.reset();
-						this.wordManager.shouldUseWords(this.difficulty !== Difficulty.EASY);
-					}
+					// can't move forward anymore, stage is completed, fight the boss
+					this.finished = true;
 				}
 				word = this.wordManager.getNextWord();
 			}
@@ -745,7 +880,7 @@ class Game extends Phaser.State {
 			this.player.body.y = 400;
 			// scroll the background again now that the ship is in
 			// position
-			this.background.autoScroll(0, 50);
+			this.startScrolling();
 			// start respawning enemies
 			this.haltEnemySpawns = false;
 			this.gameTime = this.game.time.time;
@@ -761,7 +896,7 @@ class Game extends Phaser.State {
 		this.game.physics.arcade.overlap(this.player, this.sprites, this.damageShip, null, this);
 		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damage, null, this);
 		this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this)
-		this.game.physics.arcade.overlap(this.player, this.shields, this.grantShield, null, this)
+		this.game.physics.arcade.overlap(this.player, this.shields, this.grantShieldFromPowerUp, null, this)
 	}
 
 	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
@@ -779,8 +914,7 @@ class Game extends Phaser.State {
 			enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
 			enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope; 
 
-			var index = Math.floor(Math.random() * 26);
-			var letter = this.game.add.text(0, 0, this.keys[index], { font: 'bold 16pt Arial', fill: "#88FF88" });
+			let letter = this.game.add.text(0, 0, this.wordManager.getRandomLetter(), { font: 'bold 16pt Arial', fill: "#88FF88" });
 			letter.anchor.set(0.5);
 			letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 			this.enemyLetters[letterIndex] = letter;
@@ -797,47 +931,12 @@ class Game extends Phaser.State {
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
 		this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
 		if (this.difficulty === Difficulty.HARD) {
 			this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
 		}
 		this.wordCount++;
-	}
-
-	/**
-	 * Create a shield power up at the location of the given enemy if
-	 * the system allows it.
-	 */
-	private createShieldPowerUp(enemy: Phaser.Sprite) {
-		// give enemies a 10% chance of dropping a shield power up
-		if (Math.random() > 0.1) {
-			return;
-		}
-
-		let slope = (this.player.body.y - enemy.body.y) / (this.player.body.x - enemy.body.x);
-		let powerUp = this.shields.create(
-			enemy.body.x + (enemy.body.width / 2), enemy.body.y + (enemy.body.height / 2),
-			'sheet', 'PNG/Power-ups/shield_silver.png');
-		this.game.physics.enable(powerUp);
-		powerUp.anchor.setTo(0.5, 0.5);
-		powerUp.scale.setTo(0.5, 0.5);
-		powerUp.body.velocity.x = 100 / slope; 
-		powerUp.body.velocity.y = 100;
-	}
-
-	/**
-	 * Decrease the shield of the player. If the player's shield's
-	 * health is dropped to zero, it will be destroyed.
-	 */
-	private decreaseShieldHealth() {
-		this.shieldDown.play();
-		this.shield.damage(1);
-		this.shield.alpha = this.shield.health / this.shield.maxHealth;
-		if (this.shield.health === 0) {
-			this.shield = null;
-		}
 	}
 
 	private shieldDamagedByShip(shield: Phaser.Sprite, enemy: Phaser.Sprite) {
@@ -854,30 +953,6 @@ class Game extends Phaser.State {
 		this.enemyBullets[index] = null;
 		this.enemyLetters[index] = null;
 		this.targets[index] = null;
-	}
-
-	/**
-	 * Add the given value to the current score.
-	 * 
-	 * @param increment the amount to add to the current total score,
-	 * must be a positive number
-	 */
-	private updateScore(increment: number) {
-		this.score += increment;
-		this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.score;
-	}
-
-	private animateDeath(enemy: Phaser.Sprite) {
-		let smoke = this.game.add.sprite(enemy.body.x + (enemy.body.width / 2),
-			enemy.body.y + (enemy.body.height / 2), 'sheet', 'PNG/Effects/spaceEffects_016.png');
-		smoke.anchor.setTo(0.5, 0.5);
-		smoke.animations.add('run',
-			[ 'PNG/Effects/spaceEffects_015.png', 'PNG/Effects/spaceEffects_014.png', 'PNG/Effects/spaceEffects_013.png',
-			'PNG/Effects/spaceEffects_012.png', 'PNG/Effects/spaceEffects_011.png', 'PNG/Effects/spaceEffects_010.png',
-			'PNG/Effects/spaceEffects_009.png', 'PNG/Effects/spaceEffects_008.png', ],
-			10, false);
-		smoke.animations.play('run', 10, false, true);
-		this.explosion.play();
 	}
 
 	private destroy(sprite, bullet) {
@@ -954,7 +1029,8 @@ class Game extends Phaser.State {
 	private decreaseHealth() {
 		if (this.player.health === 1) {
 			this.haltEnemySpawns = true;
-			this.background.autoScroll(0, 0);
+			this.inputText.text = "";
+			this.stopScrolling();
 
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
@@ -970,15 +1046,11 @@ class Game extends Phaser.State {
 				}
 			});
 
-			setTimeout(() => {
-				this.player.body.velocity.y = -100;
-			}, 3000);
 			
-			if (this.lives.length > 0) {
-				this.lives[this.lives.length - 1].kill();
-				this.lives.splice(this.lives.length - 1, 1);
-			} else {
-				this.endGame();
+			if (this.loseLife()) {
+				setTimeout(() => {
+					this.player.body.velocity.y = -100;
+				}, 3000);
 			}
 		} else {
 			this.player.damage(1);
@@ -1013,28 +1085,6 @@ class Game extends Phaser.State {
 		this.animateDeath(enemy);
 		this.kill(enemy);
 	}
-	
-	/**
-	 * Grants the player a shield.
-	 */
-	private grantShield(player: Phaser.Sprite, powerUp: Phaser.Sprite) {
-		// destroy the power up
-		powerUp.kill();
-		
-		if (this.shield === null) {
-			// shield doesn't exist, then create one
-			this.shield = this.game.add.sprite(this.game.width / 2, 410, 'sheet', 'PNG/Effects/shield3.png');
-			this.shield.maxHealth = 3;
-			this.shield.scale.setTo(0.5, 0.5);
-			this.shield.anchor.setTo(0.5);
-			this.game.physics.enable(this.shield);
-		} else {
-			// shield already exists, reset its alpha state
-			this.shield.alpha = 1;
-		}
-		this.shield.health = 3;
-		this.shieldUp.play();
-	}
 
 	private fireBullet(enemy: Phaser.Sprite) {
 		let diff = ((enemy.body.x - this.player.body.x) / (enemy.body.y - this.player.body.y)) * -450;
@@ -1055,11 +1105,736 @@ class Game extends Phaser.State {
 		}
 	}
 
-	private endGame(): void {
-		window.removeEventListener("keydown", this.backspaceListener, false);
-		this.game.state.start('gameover', true, false, this.difficulty, this.score);
+}
+
+class BossStage extends Stage {
+
+	private wordManager: WordManager;
+
+	private ships: EnemyShip[] = [];
+
+	private projectiles: EnemyProjectile[] = [];
+
+	private shipsFired: boolean = false;
+
+	private boss: Phaser.Sprite = null;
+	private bossLaunchpadHealth = 9;
+	private bossTurretsHealth = 9;
+	private fireTopMissile: boolean = true;
+
+	private shipsTextPromptCount = 0;
+	private bossTextPromptCount = 0;
+
+	private bossText: Phaser.Text = null;
+	private bossTargetX: number = 220;
+
+	private timer: Phaser.Timer;
+
+	public init(difficulty: Difficulty, score: number, initialShieldHealth: number): void {
+		this.difficulty = difficulty;
+		this.setInitialShieldHealth(initialShieldHealth);
+		this.score = score;
+
+		this.wordManager = (this.game as Aether).getWordManager();
+		this.timer = this.game.time.create(false);
 	}
 
+	public create(): void {
+		this.createBackgroundAssets();
+		this.createBoss();
+		this.createUI();
+	}
+
+	public update(): void {
+		this.projectiles.forEach((projectile: EnemyProjectile) => {
+			projectile.update();
+		});
+
+		if (this.shipsFired && this.projectiles.length === 0) {
+			// ships fired and all the projectiles are gone, give the
+			// player a chance to destroy the ships
+			this.shipsTextPromptCount++;
+			this.timer.add(1000, () => {
+				this.createShipTexts();
+			});
+			this.timer.start();
+			this.shipsFired = false;
+		}
+
+		if (this.player.body.y < 400) {
+			// stop moving the new ship
+			this.player.body.velocity.y = 0;
+			this.player.body.y = 400;
+			// scroll the background again now that the ship is in
+			// position
+			this.startScrolling();
+			// resume time
+			this.timer.resume();
+		}
+
+		if (this.shield !== null) {
+			// check for shield collision
+			this.game.physics.arcade.overlap(this.shield, this.enemyBulletsGroup, this.shieldDamagedByBullet, null, this);
+		}
+		this.game.physics.arcade.overlap(this.bullets, this.enemies, this.hitEnemyShip, null, this);
+		this.game.physics.arcade.overlap(this.boss, this.bullets, this.bossDamaged, null, this);
+		this.game.physics.arcade.overlap(this.player, this.enemyBulletsGroup, this.damagedByProjectile, null, this);
+		this.game.physics.arcade.overlap(this.bullets, this.enemyBulletsGroup, this.projectileIntercepted, null, this);
+	}
+
+	private shieldDamagedByBullet(shield: Phaser.Sprite, bullet: Phaser.Sprite) {
+		if (this.shield !== null) {
+			this.decreaseShieldHealth();
+			this.removeProjectile(bullet);
+		}
+	}
+
+	private createShipTexts(): void {
+		let words = [];
+		for (let i = 0; i < this.ships.length; i++) {
+			words[i] = this.game.add.text(
+				0, 0, this.wordManager.getRandomWord(false),
+				{ font: 'bold 16pt Arial', fill: "#88FF88" }
+			);
+			words[i].anchor.set(0.5);
+			words[i].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+			this.ships[i].setText(words[i]);
+		}
+
+		this.timer.add(this.difficulty === Difficulty.HARD ? 9000 : 12000, () => {
+			let attached = false;
+			for (let i = 0; i < this.ships.length; i++) {
+				if (this.ships[i].isAttachedTo(words[i])) {
+					this.ships[i].detachText();
+					attached = true;
+				}
+			}
+
+			// the user couldn't type all three words in time
+			if (attached) {
+				// if the user's currently typing something, clear it
+				this.inputText.text = "";
+
+				if (this.shipsTextPromptCount === 4) {
+					// after four chances, send the ships away
+					this.shipsTextPromptCount = 0;
+
+					this.game.add.tween(this.ships[0].sprite).to({ x: -100}, 1000, Phaser.Easing.Linear.None, true, 500);
+					this.game.add.tween(this.ships[1].sprite).to({ y: -100}, 1000, Phaser.Easing.Linear.None, true, 500);
+					this.game.add.tween(this.ships[2].sprite).to({ x: this.game.width + 100}, 1000, Phaser.Easing.Linear.None, true, 500);
+
+					this.timer.add(2000, () => {
+						this.ships.forEach((ship: EnemyShip) => {
+							ship.sprite.kill();
+						});
+						this.ships = [];
+						// move the boss after the ships are gone
+						this.moveBossToLaunchMissiles();
+					});
+					this.timer.start();
+				} else {
+					// after wiping the text, fire in one second
+					this.fireFromShips(1000);
+				}
+			}
+		});
+	}
+
+	private bossDamaged(boss: Phaser.Sprite, projectile: Phaser.Sprite) {
+		// the boss can't be damaged unless it has text on it
+		if (this.bossText !== null) {
+			projectile.kill();
+			this.bossText.kill();
+			this.bossText = null;
+
+			if (this.bossTargetX === 140) {
+				this.bossTurretsHealth--;
+			} else if (this.bossTargetX === 220) {
+				this.bossLaunchpadHealth--;
+			}
+
+			if (this.bossTurretsHealth === 0 && this.bossLaunchpadHealth === 0) {
+				this.updateScore(18);
+				this.game.add.tween(this.boss).to({ angle: 30 }, 5000,
+					Phaser.Easing.Linear.None, true);
+				let fade = this.game.add.tween(this.boss).to({ alpha: 0 }, 10000,
+					Phaser.Easing.Linear.None, true);
+				fade.onComplete.add(() => {
+					this.boss.kill();
+					this.endGame();
+				});
+				this.boss.body.velocity.x = 10;
+				this.boss.body.velocity.y = 20;
+				return;
+			}
+			
+			let timer = this.blink(this.boss, 200, 5);
+			timer.onComplete.add(() => {
+				this.moveBoss();
+			});
+			timer.start();
+		}
+	}
+
+	private hitEnemyShip(bullet: Phaser.Sprite, ship: Phaser.Sprite) {
+		for (let i = 0; i < this.ships.length; i++) {
+			if (this.ships[i].contains(ship) && this.ships[i].isInterceptedBy(bullet)) {
+				this.ships[i].damage();
+
+				if (!this.ships[i].alive()) {
+					this.animateDeath(ship);
+					this.ships.splice(i, 1);
+
+					if (this.ships.length === 0) {
+						// all ships dead, expose the boss to damage
+						this.promptLaunchpadBossText();
+						return;
+					}
+				}
+				break;
+			}
+		}
+
+		for (let i = 0; i < this.ships.length; i++) {
+			if (this.ships[i].hasTextAttached()) {
+				return;
+			}
+		}
+
+		// no ships have any text on them, fire again
+		this.fireFromShips(1000);
+	}
+
+	private removeProjectile(sprite: Phaser.Sprite) {
+		for (let i = 0; i < this.projectiles.length; i++) {
+			if (this.projectiles[i].contains(sprite)) {
+				this.projectiles[i].damage();
+				this.projectiles.splice(i, 1);
+				this.animateDeath(sprite);
+				return;
+			}
+		}
+	}
+
+	private damagedByProjectile(player: Phaser.Sprite, enemyBullet: Phaser.Sprite): void {
+		this.removeProjectile(enemyBullet);
+		this.decreaseHealth();
+	}
+
+	private decreaseHealth() {
+		if (this.player.health === 1) {
+			this.timer.pause();
+			this.inputText.text = "";
+			this.stopScrolling();
+
+			this.player.health = 3;
+			this.player.body.y = this.game.height + 100;
+
+			if (this.loseLife()) {
+				setTimeout(() => {
+					this.player.body.velocity.y = -100;
+				}, 3000);
+			}
+		} else {
+			this.player.damage(1);
+		}
+	}
+	
+	private projectileIntercepted(bullet, enemyBullet) {
+		for (let i = 0; i < this.projectiles.length; i++) {
+			if (this.projectiles[i].contains(enemyBullet) && this.projectiles[i].isInterceptedBy(bullet)) {
+				this.removeProjectile(enemyBullet);
+				break;
+			}
+		}
+	}
+
+	private launchShips() {
+		let ship = this.enemies.create(this.boss.body.x, this.boss.y - 29, 'sheet', 'PNG/Enemies/enemyBlue1.png');
+		ship.moveDown();
+		this.ships.push(new EnemyShip(this.wordManager, ship, 2));
+
+		this.game.add.tween(ship).to(
+			{ x: this.game.width / 2 - 100, y: 200, angle: 0 }, 1500, Phaser.Easing.Linear.None, true
+		);
+
+		ship = this.enemies.create(this.boss.body.x, this.boss.y - 29, 'sheet', 'PNG/Enemies/enemyBlue1.png');
+		ship.alpha = 0;
+		ship.moveDown();
+		this.ships.push(new EnemyShip(this.wordManager, ship, 2));
+
+		let s = ship;
+		setTimeout(() => {
+			s.alpha = 1;
+		}, 1000);
+		this.game.add.tween(ship).to(
+			{ x: this.game.width / 2, y: 200, angle: 0 }, 1500, Phaser.Easing.Linear.None, true, 1000
+		);
+
+		ship = this.enemies.create(this.boss.body.x, this.boss.y - 29, 'sheet', 'PNG/Enemies/enemyBlue1.png');
+		ship.alpha = 0;
+		ship.moveDown();
+		this.ships.push(new EnemyShip(this.wordManager, ship, 2));
+
+		let s2 = ship;
+		setTimeout(() => {
+			s2.alpha = 1;
+		}, 2000);
+
+		this.fireFromShips(4000);
+		this.game.add.tween(ship).to(
+			{ x: this.game.width / 2 + 100, y: 200, angle: 0 }, 1500, Phaser.Easing.Linear.None, true, 2000
+		);
+	}
+
+	private fireFromShips(timeout: number) {
+		this.timer.add(4000, () => {
+			this.enemies.forEach((enemy: Phaser.Sprite) => {
+				let rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, this.player.body.x, this.player.body.y);
+				enemy.angle = Phaser.Math.radToDeg(rotate) - 90;
+				let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
+				let timeToImpact = this.difficulty === Difficulty.HARD ? 3000 : 4000;
+				let projectile = new EnemyProjectile(this.wordManager, this.player, enemy, enemyBullet, timeToImpact);
+				this.projectiles.push(projectile);
+				
+				let timer = this.game.time.create(true);
+				timer.add(timeToImpact, () => {
+					if (enemyBullet.alive) {
+						this.removeProjectile(enemyBullet);
+					}
+				});
+				timer.start(); 
+				this.fire.play();
+			}, this, true);
+			this.shipsFired = true;
+		});
+		this.timer.start();
+	}
+
+	private createMissiles() {
+		let missile = this.game.add.sprite(170, this.fireTopMissile ? 92 : 102, 'sheet', "PNG/Missiles/spaceMissiles_040.png");
+		let x = 200 + Math.floor(Math.random() * 130);
+		let y = 100 + Math.floor(Math.random() * 50);
+		this.enemyBulletsGroup.add(missile);
+		let projectile = new EnemyMissile(this.wordManager, missile);
+		projectile.fire(this.player, x, y, 1000, 3000, () => {
+			if (missile.alive) {
+				this.removeProjectile(missile);
+			}
+		});
+		this.projectiles.push(projectile);
+		this.fireTopMissile = !this.fireTopMissile;
+	}
+
+	private createBoss() {
+		this.boss = this.game.add.sprite(0, 0, 'sheet', 'PNG/Enemies/boss1.png');
+		this.boss.scale.setTo(0.7, 0.7);
+		this.game.physics.enable(this.boss);
+
+		let dot = this.game.add.sprite(-12, -55, 'sheet', 'PNG/Effects/dot.png');
+		this.game.add.tween(dot).to(
+			{ alpha: 0 }, 500, Phaser.Easing.Linear.None, true, 100, -1, true
+		);
+		this.boss.addChild(dot);
+
+		dot = this.game.add.sprite(-9, 29, 'sheet', 'PNG/Effects/dot.png');
+		this.game.add.tween(dot).to(
+			{ alpha: 0 }, 500, Phaser.Easing.Linear.None, true, 250, -1, true
+		);
+		this.boss.addChild(dot);
+
+		dot = this.game.add.sprite(3, 124, 'sheet', 'PNG/Effects/dot.png');
+		this.game.add.tween(dot).to(
+
+			{ alpha: 0 }, 500, Phaser.Easing.Linear.None, true, 0, -1, true
+		);
+		this.boss.addChild(dot);
+		this.boss.x = this.game.width / 2;
+		this.boss.y = 125;
+		this.boss.anchor.setTo(0.5, 0.5);
+
+		this.moveBossToLaunchMissiles();
+	}
+
+	private launchMissiles() {
+		for (let i = 0; i < 6; i++) {
+			let delay = this.difficulty === Difficulty.HARD ? i * 2000 : i * 3000;
+			this.timer.add(delay + 500, () => {
+				this.createMissiles();
+			});
+		}
+		let delay = this.difficulty === Difficulty.HARD ? 12000 : 18000;
+		this.timer.add(delay + 500, () => {
+			this.promptTurretBossText();
+		});
+		this.timer.start();
+	}
+
+	private promptTurretBossText() {
+		this.bossTargetX = 140;
+		this.promptBossText();
+	}
+
+	private promptLaunchpadBossText() {
+		this.bossTargetX = 220;
+		this.promptBossText();
+	}
+
+	private promptBossText() {
+		this.bossText = this.game.add.text(
+			this.bossTargetX, 70, this.wordManager.getRandomWord(false), { font: 'bold 16pt Arial', fill: "#88FF88" });
+		this.bossText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.bossText.anchor.setTo(0.5);
+
+		this.bossTextPromptCount++;
+
+		if (this.bossTextPromptCount === 3) {
+			let timer = this.game.time.create(true);
+			timer.add(this.difficulty === Difficulty.HARD ? 3000 : 4000, (text: Phaser.Sprite) => {
+				if (text.alive) {
+					text.kill();
+					this.bossText = null;
+					this.moveBoss();
+				}
+			}, this, this.bossText);
+			timer.start();
+		} else {
+			let timer = this.game.time.create(true);
+			timer.add(this.difficulty === Difficulty.HARD ? 3000 : 4000, (text: Phaser.Sprite) => {
+				if (text.alive) {
+					this.inputText.text = "";
+					text.kill();
+					this.promptBossText();
+				}
+			}, this, this.bossText);
+			timer.start();
+		}
+	}
+
+	private moveBoss(): void {
+		// boss turrets are currently the target
+		if (this.bossTargetX === 140) {
+			if (this.bossTextPromptCount === 3) {
+				this.bossTextPromptCount = 0;
+				// prompted three times, but launchpads already down, repeat
+				if (this.bossLaunchpadHealth === 0) {
+					this.launchMissiles();
+				} else {
+					// otherwise, move
+					this.moveBossToLaunchShips();
+				}
+			} else if (this.bossTurretsHealth === 0) {
+				// turrets down, launch ships exclusively
+				this.moveBossToLaunchShips();
+			} else {
+				this.promptTurretBossText();
+			}
+		} else {
+			if (this.bossTextPromptCount === 3) {
+				this.bossTextPromptCount = 0;
+				// prompted three times, but turrets already down, repeat
+				if (this.bossTurretsHealth === 0) {
+					this.launchShips();
+				} else {
+					// otherwise, move
+					this.moveBossToLaunchMissiles();
+				}
+			} else if (this.bossLaunchpadHealth === 0) {
+				// launchpads down, launch missiles exclusively
+				this.moveBossToLaunchMissiles();
+			} else {
+				this.promptLaunchpadBossText();
+			}
+		}
+	}
+
+	private moveBossToLaunchShips(): void {
+		let tween = this.game.add.tween(this.boss).to(
+			{x: this.game.width / 2 + 120 }, 3000, Phaser.Easing.Linear.None, true
+		);
+		tween.onComplete.add(() => {
+			this.launchShips();
+		});
+	}
+
+	private moveBossToLaunchMissiles(): void {
+		let tween = this.game.add.tween(this.boss).to(
+			{x: this.game.width / 2 - 120 }, 3000, Phaser.Easing.Linear.None, true
+		);
+		tween.onComplete.add(() => {
+			this.launchMissiles();
+		});
+	}
+
+	protected typed(character: string): void {
+		if (this.timer.paused) {
+			// game is paused, ignore all input
+			return;
+		}
+
+		if (this.inputText.text.length === 0) {
+			for (let i = 0; i < this.projectiles.length; i++) {
+				if (!this.projectiles[i].isIntercepted() && this.projectiles[i].matchesText(character)) {
+					this.fireAt(this.projectiles[i]);
+					return;
+				}
+			}
+		}
+
+		let prefix = this.inputText.text + character;
+		if (this.wordManager.isValidRandomPrefix(prefix)) {
+			for (let i = 0; i < this.ships.length; i++) {
+				if (!this.ships[i].isIntercepted() && this.ships[i].matchesText(prefix)) {
+					this.fireAt(this.ships[i]);
+					return;
+				}
+			}
+			
+			for (let i = 0; i < this.projectiles.length; i++) {
+				if (!this.projectiles[i].isIntercepted() && this.projectiles[i].matchesText(prefix)) {
+					this.fireAt(this.projectiles[i]);
+					return;
+				}
+			}
+
+			if (this.bossText !== null && this.wordManager.matchesRandom(prefix, this.bossText.text)) {
+				this.inputText.text = "";
+				let bullet = this.bullets.getFirstExists(false);
+				bullet.scale.setTo(0.5, 0.5);
+				bullet.reset(this.player.x - 2, this.player.y - 12);
+				this.game.add.tween(bullet).to(
+					{ x: this.bossTargetX, y: 70 }, 500, Phaser.Easing.Linear.None, true
+				);
+				this.bossText.fill = "#ff8888";
+				this.fire.play();
+
+				let rotate = Phaser.Math.angleBetween(
+					this.player.body.x, this.player.body.y, this.bossText.x, this.bossText.y);
+				this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
+				bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
+				return;
+			}
+
+			this.inputText.text = prefix;
+		}
+	}
+
+	private blink(sprite: Phaser.Sprite, delay: number, times: number): Phaser.Timer {
+		let timer = this.game.time.create(true);
+		for (let i = 0; i < times; i++) {
+			timer.add(delay + (delay * 2* i), () => {
+				sprite.alpha = 0;
+			});
+			timer.add((delay * 2) + (delay * 2 * i), () => {
+				sprite.alpha = 1;
+			});
+		}
+		return timer;
+	}
+
+	private fireAt(sprite: EnemySprite): void {
+		this.inputText.text = "";
+		let bullet = this.bullets.getFirstExists(false);
+		bullet.scale.setTo(0.5, 0.5);
+		bullet.reset(this.player.x - 2, this.player.y - 12);
+		sprite.interceptedBy(bullet);
+		this.fire.play();
+		
+		let rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, sprite.getX(), sprite.getY());
+		this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
+		bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
+	}
+
+	public shutdown(): void {
+		this.timer.destroy();
+		super.shutdown();
+	}
+
+}
+
+class EnemySprite {
+
+	protected wordManager: WordManager;
+
+	public sprite: Phaser.Sprite;
+
+	protected text: Phaser.Text = null;
+
+	private interception: Phaser.Sprite = null;
+
+	constructor(wordManager: WordManager, sprite: Phaser.Sprite, health: number) {
+		this.wordManager = wordManager;
+		this.sprite = sprite;
+		this.sprite.health = health;
+	}
+
+	public getX(): number {
+		return this.sprite.body.x + (this.sprite.body.width / 2);
+	}
+
+	public getY(): number {
+		return this.sprite.body.y + (this.sprite.body.height / 2);
+	}
+
+	public setText(text: Phaser.Text): void {
+		this.text = text;
+		text.x = this.sprite.body.x;
+		text.y = this.sprite.body.y - 25;
+	}
+
+	public matchesText(text: string): boolean {
+		return this.text.text === text;
+	}
+
+	public contains(sprite: Phaser.Sprite): boolean {
+		return this.sprite === sprite;
+	}
+
+	public isInterceptedBy(interception: Phaser.Sprite): boolean {
+		return this.interception === interception;
+	}
+
+	public isIntercepted(): boolean {
+		return this.interception !== null;
+	}
+
+	public interceptedBy(interception: Phaser.Sprite): void {
+		this.interception = interception;
+		this.sprite.game.add.tween(this.interception).to(
+			{ x: this.sprite.body.x + (this.sprite.body.width / 2),
+				y: this.sprite.body.y + (this.sprite.body.height / 2) },
+			500, Phaser.Easing.Linear.None, true
+		);
+		this.text.fill = "#ff8888";
+	}
+
+	public update(): void {
+		if (this.text !== null) {
+			this.text.x = this.sprite.body.x;
+			this.text.y = this.sprite.body.y - 25;
+		}
+	}
+
+	public damage(): void {
+		this.sprite.damage(1);
+		this.text.kill();
+		this.text = null;
+		if (this.interception !== null) {
+			this.interception.kill();
+			this.interception = null;
+		}
+	}
+
+	public alive(): boolean {
+		return this.sprite.health !== 0;
+	}
+
+	public detachText(): void {
+		this.wordManager.removeRandom(this.text.text);
+		this.text.kill();
+		this.text = null;
+	}
+
+	public hasTextAttached(): boolean {
+		return this.text !== null;
+	}
+
+	public isAttachedTo(text: Phaser.Text): boolean {
+		return this.text === text;
+	}
+}
+
+class EnemyShip extends EnemySprite {
+
+	constructor(wordManager: WordManager, enemy: Phaser.Sprite, health: number) {
+		super(wordManager, enemy, 2);
+		enemy.anchor.setTo(0.5);
+		enemy.scale.setTo(0.3);
+		enemy.angle = 90;
+	}
+
+	public matchesText(text: string): boolean {
+		return this.hasTextAttached() && this.wordManager.matchesRandom(text, this.text.text);
+	}
+}
+
+class EnemyProjectile extends EnemySprite {
+
+	constructor(wordManager: WordManager, player: Phaser.Sprite, enemy: Phaser.Sprite, projectile: Phaser.Sprite, timeToImpact: number) {
+		super(wordManager, projectile, 1);
+
+		let rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, player.body.x, player.body.y);
+		projectile.angle = Phaser.Math.radToDeg(rotate) + 90;
+		projectile.scale.setTo(0.5);
+		projectile.anchor.setTo(0.5);
+		projectile.reset(enemy.x, enemy.y);
+		player.game.add.tween(projectile).to(
+			{ x: player.body.x + (player.body.width / 2),
+				y: player.body.y + (player.body.height / 2) },
+			timeToImpact, Phaser.Easing.Linear.None, true
+		);
+
+		let letter = player.game.add.text(
+			0, 0, (player.game as Aether).getWordManager().getRandomLetter(),
+			{ font: 'bold 16pt Arial', fill: "#88FF88" }
+		);
+		letter.anchor.set(0.5);
+		letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+		this.setText(letter);
+	}
+}
+
+class EnemyMissile extends EnemySprite {
+	
+	private smoke: Phaser.Sprite;
+
+	constructor(wordManager: WordManager, missile: Phaser.Sprite) {
+		super(wordManager, missile, 1);
+		
+		missile.angle = 90;
+		missile.anchor.setTo(0.5);
+		missile.scale.setTo(0.8);
+		missile.game.physics.arcade.enable(missile);
+
+		this.smoke = missile.game.add.sprite(-3, 17, 'sheet', 'PNG/Effects/spaceEffects_007.png');
+		this.smoke.alpha = 0;
+		this.smoke.scale.setTo(0.5, 0.25);
+		missile.addChild(this.smoke);
+	}
+
+	public fire(player: Phaser.Sprite, x: number, y: number, moveDelay: number, fireDelay: number, callback: Function) {
+		let rotate = Phaser.Math.angleBetween(x, y, player.body.x, player.body.y);
+		let angle = Phaser.Math.radToDeg(rotate) + 90;
+		let moveTween = player.game.add.tween(this.sprite).to(
+			{ x: x, y: y, angle: angle }, moveDelay, Phaser.Easing.Linear.None, true);
+
+		moveTween.onComplete.add(() => {
+			let letter = this.sprite.game.add.text(0, 0, this.wordManager.getRandomWord(false),
+				{ font: 'bold 16pt Arial', fill: "#88FF88" }
+			);
+			letter.anchor.set(0.5);
+			letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
+			this.setText(letter);
+			this.fireAtPlayer(player, this.sprite, fireDelay, moveDelay, callback);
+		});
+
+		player.game.add.tween(this.smoke).to({ alpha: 1 }, moveDelay / 2, Phaser.Easing.Linear.None, true, 0, 0, true);
+	}
+
+	private fireAtPlayer(player: Phaser.Sprite, missile: Phaser.Sprite, fireDelay, moveDelay, callback: Function) {
+		let tween = player.game.add.tween(missile).to(
+			{ x: player.body.x + (player.body.width / 2),
+				y: player.body.y + (player.body.height / 2),
+					},
+			fireDelay, Phaser.Easing.Linear.None, true, moveDelay
+		);
+		tween.onComplete.add(callback);
+		player.game.add.tween(this.smoke).to({ alpha: 1 }, fireDelay, Phaser.Easing.Linear.None, true, moveDelay);
+	}
+
+	public matchesText(text: string): boolean {
+		return this.hasTextAttached() && this.wordManager.matchesRandom(text, this.text.text);
+	}
 }
 
 class GameOver extends Phaser.State {
@@ -1156,7 +1931,7 @@ class GameOver extends Phaser.State {
 				this.current = this.score;
 			}
 			// don't show decimals to the user
-			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + this.current;
+			this.scoreText.text = (this.game as Aether).getLocalizedString(SCORE) + ": " + Math.floor(this.current);
 		}
 	}
 }
@@ -1183,16 +1958,41 @@ class WordManager {
 	private japaneseSports = [
 		"バスケットボール", "テニス", "ソフトボール", "バレーボール", "バドミントン", "野球", "水泳"
 	];
+
+	private englishDays = [
+		"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
+	];
+	private japaneseDays = [
+		"日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"
+	];
+
+	private englishMonths = [
+		"January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December"
+	];
+	private japaneseMonths = [
+		"一月", "二月", "三月", "四月", "五月", "六月",
+		"七月", "八月", "九月", "十月", "十一月", "十二月"
+	];
 	
-	private englishWords: string[][] = [ this.englishNumbers, this.englishColors, this.englishSports ];
-	private japaneseWords: string[][] = [ this.japaneseNumbers, this.japaneseColors, this.japaneseSports ];
+	private englishWords: string[][] = [
+		this.englishNumbers, this.englishColors, this.englishSports, this.englishDays, this.englishMonths
+	];
+	private japaneseWords: string[][] = [
+		this.japaneseNumbers, this.japaneseColors, this.japaneseSports, this.japaneseDays, this.japaneseMonths
+	];
 	private set: number;
+
+	private englishAll: string[] = [];
+	private japaneseAll: string[] = [];
 
 	/**
 	 * An array that corresponds to the words that have already been
 	 * processed.
 	 */
 	private done: boolean[] = [];
+
+	private allDone: boolean[] = [];
 
 	private english: string[];
 	private japanese: string[];
@@ -1213,6 +2013,17 @@ class WordManager {
 
 	constructor() {
 		this.reset();
+
+		this.englishAll = this.englishAll.concat(
+			this.englishNumbers, this.englishColors, this.englishSports, this.englishDays, this.englishMonths
+		);
+		this.japaneseAll = this.japaneseAll.concat(
+			this.japaneseNumbers, this.japaneseColors, this.japaneseSports, this.japaneseDays, this.japaneseMonths
+		);
+		
+		for (let i = 0; i < this.englishAll.length; i++) {
+			this.allDone[i] = false;	
+		}
 	}
 
 	/**
@@ -1362,6 +2173,78 @@ class WordManager {
 		} else {
 			return this.english[index];
 		}
+	}
+
+	/**
+	 * Returns a random lowercased letter from the English alphabet.
+	 * 
+	 * @return a random lowercased letter in the English alphabet 
+	 */
+	public getRandomLetter(): string {
+		let index = Math.floor(Math.random() * 26);
+		return this.alphabet[index];
+	}
+
+	public isValidRandomPrefix(prefix: string): boolean {
+		let length = prefix.length;
+		for (let i = 0; i < this.pending.length; i++) {
+			if (this.pending[i].substr(0, length) === prefix) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public removeRandom(translation: string): void {
+		let index = this.pendingTranslation.indexOf(translation);
+		if (index !== -1) {
+			this.pendingTranslation.splice(index, 1);
+			this.pending.splice(index, 1);
+		}
+	}
+
+	public matchesRandom(input: string, translation: string): boolean {
+		let index = this.pending.indexOf(input);
+		if (index === this.pendingTranslation.indexOf(translation)) {
+			this.pending.splice(index, 1);
+			this.pendingTranslation.splice(index, 1);
+			return true;
+		}
+		return false;
+	}
+
+	public getRandomWord(repeats: boolean): string {
+		if (!this.useWords) {
+			let letter = this.getRandomLetter();
+			this.pending.push(letter);
+			this.pendingTranslation.push(letter);
+			return letter;
+		}
+
+		let index = Math.floor(Math.random() * this.englishAll.length);
+		if (repeats) {
+			let filled = true;
+			for (let i = 0; i < this.allDone.length; i++) {
+				if (!this.allDone[i]) {
+					filled = false;
+					break;
+				}
+			}
+
+			if (filled) {
+				for (let i = 0; i < this.allDone.length; i++) {
+					this.allDone[i] = false;
+				}
+			} else {
+				while (this.allDone[index]) {
+					index = Math.floor(Math.random() * this.englishAll.length);
+				}
+			}
+			this.allDone[index] = true;
+		}
+		this.pending.push(this.englishAll[index]);
+		this.pendingTranslation.push(this.japaneseAll[index]);
+		return this.japaneseAll[index];
 	}
 
 }
