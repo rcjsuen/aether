@@ -635,8 +635,6 @@ class Level extends Stage {
 
 	private waitTime: number = 5000;
 	
-	private wordsGroup: Phaser.Group;
-	
 	private wordCount: number = 0;
 
 	private words: Phaser.Text[] = [];
@@ -673,7 +671,7 @@ class Level extends Stage {
 			this.enemies.forEach((sprite) => {
 				sprite.kill();
 			}, this);
-			this.wordsGroup.forEach((sprite) => {
+			this.words.forEach((sprite) => {
 				sprite.kill();
 			}, this);
 
@@ -707,8 +705,6 @@ class Level extends Stage {
 	public create() {
 		this.createBackgroundAssets();
 		this.createUI();
-
-		this.wordsGroup = this.game.add.group();
 
 		this.gameTime = this.game.time.time;
 	}
@@ -935,7 +931,6 @@ class Level extends Stage {
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
 		this.words[this.wordCount].anchor.set(0.5);
 		this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-		this.wordsGroup.add(this.words[this.wordCount]);
 
 		this.sprites[this.wordCount] = enemy;
 		if (this.difficulty === Difficulty.HARD) {
