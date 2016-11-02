@@ -729,7 +729,6 @@ class Level extends Stage {
 	private words: Phaser.Text[] = [];
 	private sprites: Phaser.Sprite[] = [];
 	private enemyBullets: Phaser.Sprite[] = [];
-	private enemyBulletTimes: number[] = [];
 	private enemyLetters: Phaser.Text[] = [];
 	private gameTime: number;
 	private targets: Phaser.Sprite[] = [];
@@ -779,7 +778,6 @@ class Level extends Stage {
 			this.words = [];
 			this.sprites = [];
 			this.enemyBullets = [];
-			this.enemyBulletTimes = [];
 			this.enemyLetters = [];
 			this.player = null;
 			this.wordManager.reset();
@@ -938,17 +936,6 @@ class Level extends Stage {
 			}
 		}
 
-		if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
-			for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-				if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-					if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-						this.enemyBulletTimes[i] = null;
-						this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
-					}
-				}
-			}
-		}
-
 		for (var i = 0; i < this.words.length; i++) {
 			if (this.words[i] !== null && this.words[i] !== undefined) {
 				this.words[i].x = this.sprites[i].x;
@@ -1023,7 +1010,15 @@ class Level extends Stage {
 
 		this.sprites[this.wordCount] = enemy;
 		if (this.difficulty === Difficulty.HARD) {
-			this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+			let delay = 500 + (Math.random() * 1500);
+			let timer = this.game.time.create(true);
+			let index = this.wordCount;
+			timer.add(delay, () => {
+				if (enemy.alive && !this.haltEnemySpawns) {
+					this.enemyBullets[index] = this.fireEnemyBullet(enemy, index);
+				}
+			});
+			timer.start();
 		}
 		this.wordCount++;
 	}
@@ -1057,7 +1052,6 @@ class Level extends Stage {
 				this.sprites[i] = null;
 				this.words[i] = null;
 				this.targets[index] = null;
-				this.enemyBulletTimes[i] = null;
 
 				this.updateScore(1);
 
