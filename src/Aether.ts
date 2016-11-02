@@ -647,6 +647,7 @@ abstract class Stage extends Phaser.State {
 			// shield doesn't exist, create one
 			this.shield = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/Effects/shield3.png');
 			this.shield.maxHealth = 3;
+			this.shield.health = health;
 			this.shield.scale.setTo(0.5, 0.5);
 			this.shield.anchor.setTo(0.5);
 			this.game.physics.enable(this.shield);
