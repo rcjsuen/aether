@@ -1121,6 +1121,7 @@ class Level extends Stage {
 			this.inputText.text = "";
 			this.stopScrolling();
 
+			this.player.angle = 0;
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
 
@@ -1416,6 +1417,7 @@ class BossStage extends Stage {
 			this.inputText.text = "";
 			this.stopScrolling();
 
+			this.player.angle = 0;
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
 
