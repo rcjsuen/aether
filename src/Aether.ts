@@ -15,6 +15,17 @@ class Aether extends Phaser.Game {
 
 	private language: Language = Language.JAPANESE;
 
+	/**
+	 * Whether the game is a custom game with the word list supplied
+	 * by the player.
+	 */
+	private custom: boolean = false;
+
+	/**
+	 * The number of lives that the player has.
+	 */
+	private lives: number = 2;
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
@@ -38,6 +49,43 @@ class Aether extends Phaser.Game {
 
 	public getLocalizedString(key: string): string {
 		return this.localization.getString(this.language, key);
+	}
+
+	/**
+	 * Sets whether this is a custom game or not.
+	 * 
+	 * @param custom <tt>true</tt> if this is a custom game,
+	 * <tt>false</tt> otherwise
+	 */
+	public setCustom(custom: boolean): void {
+		this.custom = custom;
+	}
+
+	/**
+	 * Returns whether this game instance uses words supplied by the
+	 * player or not.
+	 * 
+	 * @return whether the game is running custom words from the player
+	 * or not 
+	 */
+	public isCustom(): boolean {
+		return this.custom;
+	}
+
+	/**
+	 * Informs the game that the player has lost one life.
+	 */
+	public loseLife(): void {
+		this.lives--;
+	}
+
+	/**
+	 * Returns the number of lives that the player currently has.
+	 * 
+	 * @return the number of lives the player has remaining
+	 */
+	public getLives(): number {
+		return this.lives;
 	}
 
 }
@@ -148,6 +196,12 @@ class TitleScreen extends Phaser.State {
 	 */
 	private hardText: Phaser.Text;
 
+	/**
+	 * The text for allowing the user to pick and use a custom word
+	 * list.
+	 */
+	private customText: Phaser.Text;
+
 	private background: Phaser.TileSprite;
 
 	/**
@@ -184,11 +238,12 @@ class TitleScreen extends Phaser.State {
 
 		
 		let aether = this.game as Aether;
-		this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
-		this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
-		this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
+		this.easyText = this.createDifficultyText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+		this.normalText = this.createDifficultyText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+		this.hardText = this.createDifficultyText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
+		this.customText = this.createCustomText(aether.getLocalizedString(CUSTOM), 450);
 		
-		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.ship = this.game.add.sprite(this.game.width / 2, 500, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
 		this.ship.anchor.setTo(0.5);
 		this.game.physics.arcade.enable(this.ship);
@@ -202,6 +257,7 @@ class TitleScreen extends Phaser.State {
 		this.applyFade(this.easyText);
 		this.applyFade(this.normalText);
 		this.applyFade(this.hardText);
+		this.applyFade(this.customText);
 		this.applyFade(this.background);
 	}
 
@@ -214,7 +270,7 @@ class TitleScreen extends Phaser.State {
 		this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 
-	private createText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
+	private createText(content: string, y: number): Phaser.Text {
 		let startText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
 		startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		startText.anchor.setTo(0.5, 0.5);
@@ -225,11 +281,38 @@ class TitleScreen extends Phaser.State {
 		startText.events.onInputOut.add(() => {
 			startText.fill = "#ffffff";
 		});
+		return startText;
+	}
+
+	private createDifficultyText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
+		let startText = this.createText(content, y);
 		startText.events.onInputDown.add(() => {
 			this.ship.body.velocity.y = -300;
 			this.difficulty = difficulty;
+			(this.game as Aether).setCustom(false);
 		});
 		return startText;
+	}
+
+	private createCustomText(content: string, y: number): Phaser.Text {
+		let text = this.createText(content, y);
+		text.events.onInputDown.add(() => {
+			let input = document.createElement("input");
+			input.setAttribute("type", "file");
+			input.addEventListener("change", (event: any) => {
+				let aether = this.game as Aether;
+				let wordManager = aether.getWordManager();
+				if (event.target.files.length !== 0) {
+					this.difficulty = Difficulty.MEDIUM;
+					wordManager.readFiles(event.target.files, () => {
+						this.ship.body.velocity.y = -300;
+						aether.setCustom(true);
+					});
+				}
+			});
+			input.click();
+		});
+		return text;
 	}
 
 	public update(): void {
@@ -400,8 +483,13 @@ abstract class Stage extends Phaser.State {
 	}
 
 	private createLives(): void {
-		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
-		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+		let lives = (this.game as Aether).getLives();
+		if (lives === 1) {
+			this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+		} else if (lives === 2) {
+			this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+			this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+		}
 	}
 
 	private createPlayer(): void {
@@ -489,6 +577,7 @@ abstract class Stage extends Phaser.State {
 		this.createPlayer();
 		if (this.initialShieldHealth !== 0) {
 			this.grantShield(this.initialShieldHealth);
+			this.shield.alpha = this.shield.health / 3;
 		}
 		this.shields = this.game.add.group();
 		this.shields.enableBody = true;
@@ -559,14 +648,13 @@ abstract class Stage extends Phaser.State {
 			// shield doesn't exist, create one
 			this.shield = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/Effects/shield3.png');
 			this.shield.maxHealth = 3;
+			this.shield.health = health;
 			this.shield.scale.setTo(0.5, 0.5);
 			this.shield.anchor.setTo(0.5);
 			this.game.physics.enable(this.shield);
-			this.shield.alpha = health / 3;
 			return true;
 		}
 		this.shield.health = health;
-		this.shield.alpha = health / 3;
 		return false;
 	}
 	
@@ -612,6 +700,7 @@ abstract class Stage extends Phaser.State {
 	}
 
 	protected loseLife(): boolean {
+		(this.game as Aether).loseLife();
 		if (this.lives.length > 0) {
 			this.lives[this.lives.length - 1].kill();
 			this.lives.splice(this.lives.length - 1, 1);
@@ -640,7 +729,6 @@ class Level extends Stage {
 	private words: Phaser.Text[] = [];
 	private sprites: Phaser.Sprite[] = [];
 	private enemyBullets: Phaser.Sprite[] = [];
-	private enemyBulletTimes: number[] = [];
 	private enemyLetters: Phaser.Text[] = [];
 	private gameTime: number;
 	private targets: Phaser.Sprite[] = [];
@@ -690,7 +778,6 @@ class Level extends Stage {
 			this.words = [];
 			this.sprites = [];
 			this.enemyBullets = [];
-			this.enemyBulletTimes = [];
 			this.enemyLetters = [];
 			this.player = null;
 			this.wordManager.reset();
@@ -849,17 +936,6 @@ class Level extends Stage {
 			}
 		}
 
-		if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
-			for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-				if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-					if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-						this.enemyBulletTimes[i] = null;
-						this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
-					}
-				}
-			}
-		}
-
 		for (var i = 0; i < this.words.length; i++) {
 			if (this.words[i] !== null && this.words[i] !== undefined) {
 				this.words[i].x = this.sprites[i].x;
@@ -934,7 +1010,15 @@ class Level extends Stage {
 
 		this.sprites[this.wordCount] = enemy;
 		if (this.difficulty === Difficulty.HARD) {
-			this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+			let delay = 500 + (Math.random() * 1500);
+			let timer = this.game.time.create(true);
+			let index = this.wordCount;
+			timer.add(delay, () => {
+				if (enemy.alive && !this.haltEnemySpawns) {
+					this.enemyBullets[index] = this.fireEnemyBullet(enemy, index);
+				}
+			});
+			timer.start();
 		}
 		this.wordCount++;
 	}
@@ -968,7 +1052,6 @@ class Level extends Stage {
 				this.sprites[i] = null;
 				this.words[i] = null;
 				this.targets[index] = null;
-				this.enemyBulletTimes[i] = null;
 
 				this.updateScore(1);
 
@@ -1032,6 +1115,7 @@ class Level extends Stage {
 			this.inputText.text = "";
 			this.stopScrolling();
 
+			this.player.angle = 0;
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
 
@@ -1327,6 +1411,7 @@ class BossStage extends Stage {
 			this.inputText.text = "";
 			this.stopScrolling();
 
+			this.player.angle = 0;
 			this.player.health = 3;
 			this.player.body.y = this.game.height + 100;
 
@@ -1863,16 +1948,20 @@ class GameOver extends Phaser.State {
 	private increment: number;
 
 	public init(difficulty: Difficulty, score: number) {
-		switch (difficulty) {
-			case Difficulty.EASY:
-				this.difficultyKey = DIFFICULTY_EASY;
-				break;
-			case Difficulty.MEDIUM:
-				this.difficultyKey = DIFFICULTY_MEDIUM;
-				break;
-			case Difficulty.HARD:
-				this.difficultyKey = DIFFICULTY_HARD;
-				break;
+		if ((this.game as Aether).isCustom()) {
+			this.difficultyKey = DIFFICULTY_CUSTOM;
+		} else {
+			switch (difficulty) {
+				case Difficulty.EASY:
+					this.difficultyKey = DIFFICULTY_EASY;
+					break;
+				case Difficulty.MEDIUM:
+					this.difficultyKey = DIFFICULTY_MEDIUM;
+					break;
+				case Difficulty.HARD:
+					this.difficultyKey = DIFFICULTY_HARD;
+					break;
+			}
 		}
 		this.score = score;
 		this.increment = this.score / 100;
@@ -2247,14 +2336,57 @@ class WordManager {
 		return this.japaneseAll[index];
 	}
 
+	/**
+	 * Reads the given set of files and uses those words as the word
+	 * list.
+	 * 
+	 * @param files the list of files to read, must not be <tt>null</tt>
+	 * @param callback the callback to execute, must not be
+	 * <tt>null</tt>
+	 */
+	public readFiles(files: Blob[], callback: Function) {
+		let wordCounter = 0;
+		let fileCounter = 0;
+		let english = [];
+		let japanese = [];
+		let reader = new FileReader();
+		
+		reader.onload = () => {
+			var text = reader.result;
+			var strings = text.split("\r");
+			for (var i = 0; i < strings.length / 2; i++) {
+				english[wordCounter] = strings[i * 2].trim();
+				japanese[wordCounter] = strings[(i * 2) + 1].trim();
+				wordCounter++;
+			}
+
+			fileCounter++;
+
+			if (fileCounter !== files.length) {
+				reader.readAsText(files[fileCounter], "UTF-8");
+			} else {
+				this.englishAll = english;
+				this.japaneseAll = japanese;
+				this.englishWords = [ english ];
+				this.japaneseWords = [ japanese ];
+				this.reset();
+				callback.call(null);
+			}
+		};
+
+		reader.readAsText(files[fileCounter], "UTF-8");
+	}
+
 }
 
 const EASY = "EASY";
 const MEDIUM = "MEDIUM";
 const HARD = "HARD";
+const CUSTOM = "CUSTOM";
 const DIFFICULTY_EASY = "DIFFICULTY_EASY";
 const DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
 const DIFFICULTY_HARD = "DIFFICULTY_HARD";
+const DIFFICULTY_CUSTOM = "DIFFICULTY_CUSTOM";
 const SCORE = "SCORE";
 const RETURN_MAIN = "RETURN_MAIN";
 const GAME_OVER = "GAME_OVER";
@@ -2265,9 +2397,11 @@ class Localization {
 		EASY: "Easy",
 		MEDIUM: "Medium",
 		HARD: "Hard",
+		CUSTOM: "Custom",
 		DIFFICULTY_EASY: "Difficulty: Easy",
 		DIFFICULTY_MEDIUM: "Difficulty: Medium",
 		DIFFICULTY_HARD: "Difficulty: Hard",
+		DIFFICULTY_CUSTOM: "Difficulty: Custom",
 		SCORE: "Score",
 		RETURN_MAIN: "Return to Main Menu",
 		GAME_OVER: "Game Over"
@@ -2277,9 +2411,11 @@ class Localization {
 		EASY: "易しい",
 		MEDIUM: "普通",
 		HARD: "難しい",
+		CUSTOM: "カスタム",
 		DIFFICULTY_EASY: "難易度: 易しい",
 		DIFFICULTY_MEDIUM: "難易度: 普通",
 		DIFFICULTY_HARD: "難易度: 難しい",
+		DIFFICULTY_CUSTOM: "難易度: カスタム",
 		SCORE: "スコア",
 		RETURN_MAIN: "メインメニューに戻る",
 		GAME_OVER: "ゲームオーバー"
