@@ -577,6 +577,7 @@ abstract class Stage extends Phaser.State {
 		this.createPlayer();
 		if (this.initialShieldHealth !== 0) {
 			this.grantShield(this.initialShieldHealth);
+			this.shield.alpha = this.shield.health / 3;
 		}
 		this.shields = this.game.add.group();
 		this.shields.enableBody = true;
@@ -651,11 +652,9 @@ abstract class Stage extends Phaser.State {
 			this.shield.scale.setTo(0.5, 0.5);
 			this.shield.anchor.setTo(0.5);
 			this.game.physics.enable(this.shield);
-			this.shield.alpha = health / 3;
 			return true;
 		}
 		this.shield.health = health;
-		this.shield.alpha = health / 3;
 		return false;
 	}
 	
