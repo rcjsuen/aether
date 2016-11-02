@@ -21,6 +21,11 @@ class Aether extends Phaser.Game {
 	 */
 	private custom: boolean = false;
 
+	/**
+	 * The number of lives that the player has.
+	 */
+	private lives: number = 2;
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
@@ -65,6 +70,22 @@ class Aether extends Phaser.Game {
 	 */
 	public isCustom(): boolean {
 		return this.custom;
+	}
+
+	/**
+	 * Informs the game that the player has lost one life.
+	 */
+	public loseLife(): void {
+		this.lives--;
+	}
+
+	/**
+	 * Returns the number of lives that the player currently has.
+	 * 
+	 * @return the number of lives the player has remaining
+	 */
+	public getLives(): number {
+		return this.lives;
 	}
 
 }
@@ -462,8 +483,13 @@ abstract class Stage extends Phaser.State {
 	}
 
 	private createLives(): void {
-		this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
-		this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+		let lives = (this.game as Aether).getLives();
+		if (lives === 1) {
+			this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+		} else if (lives === 2) {
+			this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+			this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+		}
 	}
 
 	private createPlayer(): void {
@@ -674,6 +700,7 @@ abstract class Stage extends Phaser.State {
 	}
 
 	protected loseLife(): boolean {
+		(this.game as Aether).loseLife();
 		if (this.lives.length > 0) {
 			this.lives[this.lives.length - 1].kill();
 			this.lives.splice(this.lives.length - 1, 1);
