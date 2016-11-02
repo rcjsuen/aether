@@ -15,6 +15,12 @@ class Aether extends Phaser.Game {
 
 	private language: Language = Language.JAPANESE;
 
+	/**
+	 * Whether the game is a custom game with the word list supplied
+	 * by the player.
+	 */
+	private custom: boolean = false;
+
 	constructor() {
 		super(360, 640, Phaser.CANVAS, '');
 		this.state.add('boot', Boot, true);
@@ -38,6 +44,27 @@ class Aether extends Phaser.Game {
 
 	public getLocalizedString(key: string): string {
 		return this.localization.getString(this.language, key);
+	}
+
+	/**
+	 * Sets whether this is a custom game or not.
+	 * 
+	 * @param custom <tt>true</tt> if this is a custom game,
+	 * <tt>false</tt> otherwise
+	 */
+	public setCustom(custom: boolean): void {
+		this.custom = custom;
+	}
+
+	/**
+	 * Returns whether this game instance uses words supplied by the
+	 * player or not.
+	 * 
+	 * @return whether the game is running custom words from the player
+	 * or not 
+	 */
+	public isCustom(): boolean {
+		return this.custom;
 	}
 
 }
@@ -148,6 +175,12 @@ class TitleScreen extends Phaser.State {
 	 */
 	private hardText: Phaser.Text;
 
+	/**
+	 * The text for allowing the user to pick and use a custom word
+	 * list.
+	 */
+	private customText: Phaser.Text;
+
 	private background: Phaser.TileSprite;
 
 	/**
@@ -184,11 +217,12 @@ class TitleScreen extends Phaser.State {
 
 		
 		let aether = this.game as Aether;
-		this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
-		this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
-		this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
+		this.easyText = this.createDifficultyText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+		this.normalText = this.createDifficultyText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+		this.hardText = this.createDifficultyText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
+		this.customText = this.createCustomText(aether.getLocalizedString(CUSTOM), 450);
 		
-		this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+		this.ship = this.game.add.sprite(this.game.width / 2, 500, 'sheet', 'PNG/playerShip1_red.png');
 		this.ship.scale.setTo(0.5, 0.5);
 		this.ship.anchor.setTo(0.5);
 		this.game.physics.arcade.enable(this.ship);
@@ -202,6 +236,7 @@ class TitleScreen extends Phaser.State {
 		this.applyFade(this.easyText);
 		this.applyFade(this.normalText);
 		this.applyFade(this.hardText);
+		this.applyFade(this.customText);
 		this.applyFade(this.background);
 	}
 
@@ -214,7 +249,7 @@ class TitleScreen extends Phaser.State {
 		this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
 	}
 
-	private createText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
+	private createText(content: string, y: number): Phaser.Text {
 		let startText = this.game.add.text(this.game.width / 2, y, content,  { fontSize: '28px', fill: '#ffffff' });
 		startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
 		startText.anchor.setTo(0.5, 0.5);
@@ -225,11 +260,38 @@ class TitleScreen extends Phaser.State {
 		startText.events.onInputOut.add(() => {
 			startText.fill = "#ffffff";
 		});
+		return startText;
+	}
+
+	private createDifficultyText(content: string, y: number, difficulty: Difficulty): Phaser.Text {
+		let startText = this.createText(content, y);
 		startText.events.onInputDown.add(() => {
 			this.ship.body.velocity.y = -300;
 			this.difficulty = difficulty;
+			(this.game as Aether).setCustom(false);
 		});
 		return startText;
+	}
+
+	private createCustomText(content: string, y: number): Phaser.Text {
+		let text = this.createText(content, y);
+		text.events.onInputDown.add(() => {
+			let input = document.createElement("input");
+			input.setAttribute("type", "file");
+			input.addEventListener("change", (event: any) => {
+				let aether = this.game as Aether;
+				let wordManager = aether.getWordManager();
+				if (event.target.files.length !== 0) {
+					this.difficulty = Difficulty.MEDIUM;
+					wordManager.readFiles(event.target.files, () => {
+						this.ship.body.velocity.y = -300;
+						aether.setCustom(true);
+					});
+				}
+			});
+			input.click();
+		});
+		return text;
 	}
 
 	public update(): void {
@@ -1863,16 +1925,20 @@ class GameOver extends Phaser.State {
 	private increment: number;
 
 	public init(difficulty: Difficulty, score: number) {
-		switch (difficulty) {
-			case Difficulty.EASY:
-				this.difficultyKey = DIFFICULTY_EASY;
-				break;
-			case Difficulty.MEDIUM:
-				this.difficultyKey = DIFFICULTY_MEDIUM;
-				break;
-			case Difficulty.HARD:
-				this.difficultyKey = DIFFICULTY_HARD;
-				break;
+		if ((this.game as Aether).isCustom()) {
+			this.difficultyKey = DIFFICULTY_CUSTOM;
+		} else {
+			switch (difficulty) {
+				case Difficulty.EASY:
+					this.difficultyKey = DIFFICULTY_EASY;
+					break;
+				case Difficulty.MEDIUM:
+					this.difficultyKey = DIFFICULTY_MEDIUM;
+					break;
+				case Difficulty.HARD:
+					this.difficultyKey = DIFFICULTY_HARD;
+					break;
+			}
 		}
 		this.score = score;
 		this.increment = this.score / 100;
@@ -2247,14 +2313,57 @@ class WordManager {
 		return this.japaneseAll[index];
 	}
 
+	/**
+	 * Reads the given set of files and uses those words as the word
+	 * list.
+	 * 
+	 * @param files the list of files to read, must not be <tt>null</tt>
+	 * @param callback the callback to execute, must not be
+	 * <tt>null</tt>
+	 */
+	public readFiles(files: Blob[], callback: Function) {
+		let wordCounter = 0;
+		let fileCounter = 0;
+		let english = [];
+		let japanese = [];
+		let reader = new FileReader();
+		
+		reader.onload = () => {
+			var text = reader.result;
+			var strings = text.split("\r");
+			for (var i = 0; i < strings.length / 2; i++) {
+				english[wordCounter] = strings[i * 2].trim();
+				japanese[wordCounter] = strings[(i * 2) + 1].trim();
+				wordCounter++;
+			}
+
+			fileCounter++;
+
+			if (fileCounter !== files.length) {
+				reader.readAsText(files[fileCounter], "UTF-8");
+			} else {
+				this.englishAll = english;
+				this.japaneseAll = japanese;
+				this.englishWords = [ english ];
+				this.japaneseWords = [ japanese ];
+				this.reset();
+				callback.call(null);
+			}
+		};
+
+		reader.readAsText(files[fileCounter], "UTF-8");
+	}
+
 }
 
 const EASY = "EASY";
 const MEDIUM = "MEDIUM";
 const HARD = "HARD";
+const CUSTOM = "CUSTOM";
 const DIFFICULTY_EASY = "DIFFICULTY_EASY";
 const DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
 const DIFFICULTY_HARD = "DIFFICULTY_HARD";
+const DIFFICULTY_CUSTOM = "DIFFICULTY_CUSTOM";
 const SCORE = "SCORE";
 const RETURN_MAIN = "RETURN_MAIN";
 const GAME_OVER = "GAME_OVER";
@@ -2265,9 +2374,11 @@ class Localization {
 		EASY: "Easy",
 		MEDIUM: "Medium",
 		HARD: "Hard",
+		CUSTOM: "Custom",
 		DIFFICULTY_EASY: "Difficulty: Easy",
 		DIFFICULTY_MEDIUM: "Difficulty: Medium",
 		DIFFICULTY_HARD: "Difficulty: Hard",
+		DIFFICULTY_CUSTOM: "Difficulty: Custom",
 		SCORE: "Score",
 		RETURN_MAIN: "Return to Main Menu",
 		GAME_OVER: "Game Over"
@@ -2277,9 +2388,11 @@ class Localization {
 		EASY: "易しい",
 		MEDIUM: "普通",
 		HARD: "難しい",
+		CUSTOM: "カスタム",
 		DIFFICULTY_EASY: "難易度: 易しい",
 		DIFFICULTY_MEDIUM: "難易度: 普通",
 		DIFFICULTY_HARD: "難易度: 難しい",
+		DIFFICULTY_CUSTOM: "難易度: カスタム",
 		SCORE: "スコア",
 		RETURN_MAIN: "メインメニューに戻る",
 		GAME_OVER: "ゲームオーバー"
