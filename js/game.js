@@ -15,6 +15,8 @@ var Aether = (function (_super) {
         this.wordManager = new WordManager();
         this.localization = new Localization();
         this.language = Language.JAPANESE;
+        this.custom = false;
+        this.lives = 2;
         this.state.add('boot', Boot, true);
         this.state.add('language', LanguageScreen);
         this.state.add('title', TitleScreen);
@@ -30,6 +32,18 @@ var Aether = (function (_super) {
     };
     Aether.prototype.getLocalizedString = function (key) {
         return this.localization.getString(this.language, key);
+    };
+    Aether.prototype.setCustom = function (custom) {
+        this.custom = custom;
+    };
+    Aether.prototype.isCustom = function () {
+        return this.custom;
+    };
+    Aether.prototype.loseLife = function () {
+        this.lives--;
+    };
+    Aether.prototype.getLives = function () {
+        return this.lives;
     };
     return Aether;
 }(Phaser.Game));
@@ -127,10 +141,11 @@ var TitleScreen = (function (_super) {
         this.titleText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.titleText.anchor.setTo(0.5, 0.5);
         var aether = this.game;
-        this.easyText = this.createText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
-        this.normalText = this.createText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
-        this.hardText = this.createText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
-        this.ship = this.game.add.sprite(this.game.width / 2, 450, 'sheet', 'PNG/playerShip1_red.png');
+        this.easyText = this.createDifficultyText(aether.getLocalizedString(EASY), 300, Difficulty.EASY);
+        this.normalText = this.createDifficultyText(aether.getLocalizedString(MEDIUM), 350, Difficulty.MEDIUM);
+        this.hardText = this.createDifficultyText(aether.getLocalizedString(HARD), 400, Difficulty.HARD);
+        this.customText = this.createCustomText(aether.getLocalizedString(CUSTOM), 450);
+        this.ship = this.game.add.sprite(this.game.width / 2, 500, 'sheet', 'PNG/playerShip1_red.png');
         this.ship.scale.setTo(0.5, 0.5);
         this.ship.anchor.setTo(0.5);
         this.game.physics.arcade.enable(this.ship);
@@ -140,13 +155,13 @@ var TitleScreen = (function (_super) {
         this.applyFade(this.easyText);
         this.applyFade(this.normalText);
         this.applyFade(this.hardText);
+        this.applyFade(this.customText);
         this.applyFade(this.background);
     };
     TitleScreen.prototype.applyFade = function (sprite) {
         this.game.add.tween(sprite).to({ alpha: 0 }, 1000, Phaser.Easing.Linear.None, true);
     };
-    TitleScreen.prototype.createText = function (content, y, difficulty) {
-        var _this = this;
+    TitleScreen.prototype.createText = function (content, y) {
         var startText = this.game.add.text(this.game.width / 2, y, content, { fontSize: '28px', fill: '#ffffff' });
         startText.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         startText.anchor.setTo(0.5, 0.5);
@@ -157,11 +172,38 @@ var TitleScreen = (function (_super) {
         startText.events.onInputOut.add(function () {
             startText.fill = "#ffffff";
         });
+        return startText;
+    };
+    TitleScreen.prototype.createDifficultyText = function (content, y, difficulty) {
+        var _this = this;
+        var startText = this.createText(content, y);
         startText.events.onInputDown.add(function () {
             _this.ship.body.velocity.y = -300;
             _this.difficulty = difficulty;
+            _this.game.setCustom(false);
         });
         return startText;
+    };
+    TitleScreen.prototype.createCustomText = function (content, y) {
+        var _this = this;
+        var text = this.createText(content, y);
+        text.events.onInputDown.add(function () {
+            var input = document.createElement("input");
+            input.setAttribute("type", "file");
+            input.addEventListener("change", function (event) {
+                var aether = _this.game;
+                var wordManager = aether.getWordManager();
+                if (event.target.files.length !== 0) {
+                    _this.difficulty = Difficulty.MEDIUM;
+                    wordManager.readFiles(event.target.files, function () {
+                        _this.ship.body.velocity.y = -300;
+                        aether.setCustom(true);
+                    });
+                }
+            });
+            input.click();
+        });
+        return text;
     };
     TitleScreen.prototype.update = function () {
         if (this.ship !== null && !this.ship.inWorld) {
@@ -249,8 +291,14 @@ var Stage = (function (_super) {
         this.inputText.anchor.setTo(0.5, 0.5);
     };
     Stage.prototype.createLives = function () {
-        this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
-        this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+        var lives = this.game.getLives();
+        if (lives === 1) {
+            this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+        }
+        else if (lives === 2) {
+            this.lives[0] = this.game.add.sprite(this.game.width - 50, 16, 'sheet', 'PNG/UI/playerLife1_red.png');
+            this.lives[1] = this.game.add.sprite(this.game.width - 50, 48, 'sheet', 'PNG/UI/playerLife1_red.png');
+        }
     };
     Stage.prototype.createPlayer = function () {
         this.player = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/playerShip1_red.png');
@@ -325,6 +373,7 @@ var Stage = (function (_super) {
         this.createPlayer();
         if (this.initialShieldHealth !== 0) {
             this.grantShield(this.initialShieldHealth);
+            this.shield.alpha = this.shield.health / 3;
         }
         this.shields = this.game.add.group();
         this.shields.enableBody = true;
@@ -374,14 +423,13 @@ var Stage = (function (_super) {
         if (this.shield === null) {
             this.shield = this.game.add.sprite(this.game.width / 2, 400, 'sheet', 'PNG/Effects/shield3.png');
             this.shield.maxHealth = 3;
+            this.shield.health = health;
             this.shield.scale.setTo(0.5, 0.5);
             this.shield.anchor.setTo(0.5);
             this.game.physics.enable(this.shield);
-            this.shield.alpha = health / 3;
             return true;
         }
         this.shield.health = health;
-        this.shield.alpha = health / 3;
         return false;
     };
     Stage.prototype.grantShieldFromPowerUp = function (player, powerUp) {
@@ -411,6 +459,7 @@ var Stage = (function (_super) {
         this.explosion.play();
     };
     Stage.prototype.loseLife = function () {
+        this.game.loseLife();
         if (this.lives.length > 0) {
             this.lives[this.lives.length - 1].kill();
             this.lives.splice(this.lives.length - 1, 1);
@@ -436,7 +485,6 @@ var Level = (function (_super) {
         this.words = [];
         this.sprites = [];
         this.enemyBullets = [];
-        this.enemyBulletTimes = [];
         this.enemyLetters = [];
         this.targets = [];
         this.level = 1;
@@ -468,7 +516,6 @@ var Level = (function (_super) {
             this.words = [];
             this.sprites = [];
             this.enemyBullets = [];
-            this.enemyBulletTimes = [];
             this.enemyLetters = [];
             this.player = null;
             this.wordManager.reset();
@@ -600,16 +647,6 @@ var Level = (function (_super) {
                 this.createEnemy(word);
             }
         }
-        if (this.difficulty === Difficulty.HARD && !this.haltEnemySpawns) {
-            for (var i = 0; i < this.enemyBulletTimes.length; i++) {
-                if (this.enemyBulletTimes[i] !== null && this.enemyBulletTimes[i] !== undefined) {
-                    if (this.game.time.time > this.enemyBulletTimes[i] && this.sprites[i] != null) {
-                        this.enemyBulletTimes[i] = null;
-                        this.enemyBullets[i] = this.fireEnemyBullet(this.sprites[i], i);
-                    }
-                }
-            }
-        }
         for (var i = 0; i < this.words.length; i++) {
             if (this.words[i] !== null && this.words[i] !== undefined) {
                 this.words[i].x = this.sprites[i].x;
@@ -660,6 +697,7 @@ var Level = (function (_super) {
         return enemyBullet;
     };
     Level.prototype.createEnemy = function (word) {
+        var _this = this;
         var x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
         var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
         enemy.scale.setTo(0.5, 0.5);
@@ -669,7 +707,15 @@ var Level = (function (_super) {
         this.words[this.wordCount].setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
         this.sprites[this.wordCount] = enemy;
         if (this.difficulty === Difficulty.HARD) {
-            this.enemyBulletTimes[this.wordCount] = 500 + (Math.random() * 1500) + this.game.time.time;
+            var delay = 500 + (Math.random() * 1500);
+            var timer = this.game.time.create(true);
+            var index_1 = this.wordCount;
+            timer.add(delay, function () {
+                if (enemy.alive && !_this.haltEnemySpawns) {
+                    _this.enemyBullets[index_1] = _this.fireEnemyBullet(enemy, index_1);
+                }
+            });
+            timer.start();
         }
         this.wordCount++;
     };
@@ -699,7 +745,6 @@ var Level = (function (_super) {
                 this.sprites[i] = null;
                 this.words[i] = null;
                 this.targets[index] = null;
-                this.enemyBulletTimes[i] = null;
                 this.updateScore(1);
                 for (var j = 0; j < this.sprites.length; j++) {
                     if (this.sprites[j] !== null && this.sprites[j] !== undefined) {
@@ -745,6 +790,7 @@ var Level = (function (_super) {
             this.haltEnemySpawns = true;
             this.inputText.text = "";
             this.stopScrolling();
+            this.player.angle = 0;
             this.player.health = 3;
             this.player.body.y = this.game.height + 100;
             this.sprites.forEach(function (sprite) {
@@ -977,6 +1023,7 @@ var BossStage = (function (_super) {
             this.timer.pause();
             this.inputText.text = "";
             this.stopScrolling();
+            this.player.angle = 0;
             this.player.health = 3;
             this.player.body.y = this.game.height + 100;
             if (this.loseLife()) {
@@ -1395,16 +1442,21 @@ var GameOver = (function (_super) {
         this.current = 0;
     }
     GameOver.prototype.init = function (difficulty, score) {
-        switch (difficulty) {
-            case Difficulty.EASY:
-                this.difficultyKey = DIFFICULTY_EASY;
-                break;
-            case Difficulty.MEDIUM:
-                this.difficultyKey = DIFFICULTY_MEDIUM;
-                break;
-            case Difficulty.HARD:
-                this.difficultyKey = DIFFICULTY_HARD;
-                break;
+        if (this.game.isCustom()) {
+            this.difficultyKey = DIFFICULTY_CUSTOM;
+        }
+        else {
+            switch (difficulty) {
+                case Difficulty.EASY:
+                    this.difficultyKey = DIFFICULTY_EASY;
+                    break;
+                case Difficulty.MEDIUM:
+                    this.difficultyKey = DIFFICULTY_MEDIUM;
+                    break;
+                case Difficulty.HARD:
+                    this.difficultyKey = DIFFICULTY_HARD;
+                    break;
+            }
         }
         this.score = score;
         this.increment = this.score / 100;
@@ -1656,14 +1708,46 @@ var WordManager = (function () {
         this.pendingTranslation.push(this.japaneseAll[index]);
         return this.japaneseAll[index];
     };
+    WordManager.prototype.readFiles = function (files, callback) {
+        var _this = this;
+        var wordCounter = 0;
+        var fileCounter = 0;
+        var english = [];
+        var japanese = [];
+        var reader = new FileReader();
+        reader.onload = function () {
+            var text = reader.result;
+            var strings = text.split("\r");
+            for (var i = 0; i < strings.length / 2; i++) {
+                english[wordCounter] = strings[i * 2].trim();
+                japanese[wordCounter] = strings[(i * 2) + 1].trim();
+                wordCounter++;
+            }
+            fileCounter++;
+            if (fileCounter !== files.length) {
+                reader.readAsText(files[fileCounter], "UTF-8");
+            }
+            else {
+                _this.englishAll = english;
+                _this.japaneseAll = japanese;
+                _this.englishWords = [english];
+                _this.japaneseWords = [japanese];
+                _this.reset();
+                callback.call(null);
+            }
+        };
+        reader.readAsText(files[fileCounter], "UTF-8");
+    };
     return WordManager;
 }());
 var EASY = "EASY";
 var MEDIUM = "MEDIUM";
 var HARD = "HARD";
+var CUSTOM = "CUSTOM";
 var DIFFICULTY_EASY = "DIFFICULTY_EASY";
 var DIFFICULTY_MEDIUM = "DIFFICULTY_MEDIUM";
 var DIFFICULTY_HARD = "DIFFICULTY_HARD";
+var DIFFICULTY_CUSTOM = "DIFFICULTY_CUSTOM";
 var SCORE = "SCORE";
 var RETURN_MAIN = "RETURN_MAIN";
 var GAME_OVER = "GAME_OVER";
@@ -1673,9 +1757,11 @@ var Localization = (function () {
             EASY: "Easy",
             MEDIUM: "Medium",
             HARD: "Hard",
+            CUSTOM: "Custom",
             DIFFICULTY_EASY: "Difficulty: Easy",
             DIFFICULTY_MEDIUM: "Difficulty: Medium",
             DIFFICULTY_HARD: "Difficulty: Hard",
+            DIFFICULTY_CUSTOM: "Difficulty: Custom",
             SCORE: "Score",
             RETURN_MAIN: "Return to Main Menu",
             GAME_OVER: "Game Over"
@@ -1684,9 +1770,11 @@ var Localization = (function () {
             EASY: "易しい",
             MEDIUM: "普通",
             HARD: "難しい",
+            CUSTOM: "カスタム",
             DIFFICULTY_EASY: "難易度: 易しい",
             DIFFICULTY_MEDIUM: "難易度: 普通",
             DIFFICULTY_HARD: "難易度: 難しい",
+            DIFFICULTY_CUSTOM: "難易度: カスタム",
             SCORE: "スコア",
             RETURN_MAIN: "メインメニューに戻る",
             GAME_OVER: "ゲームオーバー"
