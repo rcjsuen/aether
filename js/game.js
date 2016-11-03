@@ -252,6 +252,7 @@ var Stage = (function (_super) {
         this.shield = null;
         this.initialShieldHealth = 0;
         this.enemies = null;
+        this.projectiles = [];
     }
     Stage.prototype.preload = function () {
         var _this = this;
@@ -264,6 +265,11 @@ var Stage = (function (_super) {
             }
         };
         window.addEventListener("keydown", this.backspaceListener, false);
+    };
+    Stage.prototype.update = function () {
+        this.projectiles.forEach(function (projectile) {
+            projectile.update();
+        });
     };
     Stage.prototype.setInitialShieldHealth = function (initialShieldHealth) {
         this.initialShieldHealth = initialShieldHealth;
@@ -384,9 +390,6 @@ var Stage = (function (_super) {
         this.bullets.setAll('checkWorldBounds', true);
         this.bullets.setAll('outOfBoundsKill', true);
         this.enemyBulletsGroup = this.game.add.physicsGroup();
-        this.enemyBulletsGroup.createMultiple(32, 'sheet', 'PNG/Lasers/laserGreen13.png', false);
-        this.enemyBulletsGroup.setAll('checkWorldBounds', true);
-        this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
         this.createKeys();
         for (var i = 0; i < this.keys.length; i++) {
             var key_1 = this.game.input.keyboard.addKey(this.phaserKeys[i]);
@@ -458,6 +461,45 @@ var Stage = (function (_super) {
         smoke.animations.play('run', 10, false, true);
         this.explosion.play();
     };
+    Stage.prototype.fireAt = function (sprite) {
+        this.inputText.text = "";
+        var bullet = this.bullets.getFirstExists(false);
+        bullet.scale.setTo(0.5, 0.5);
+        bullet.reset(this.player.x - 2, this.player.y - 12);
+        sprite.interceptedBy(bullet);
+        this.fire.play();
+        var rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, sprite.getX(), sprite.getY());
+        this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
+        bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
+    };
+    Stage.prototype.removeProjectile = function (sprite) {
+        for (var i = 0; i < this.projectiles.length; i++) {
+            if (this.projectiles[i].contains(sprite)) {
+                this.projectiles[i].damage();
+                this.projectiles.splice(i, 1);
+                this.animateDeath(sprite);
+                return;
+            }
+        }
+    };
+    Stage.prototype.fireFromShip = function (enemy) {
+        var _this = this;
+        var rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, this.player.body.x, this.player.body.y);
+        enemy.angle = Phaser.Math.radToDeg(rotate) - 90;
+        var wordManager = this.game.getWordManager();
+        var enemyBullet = this.game.add.sprite(0, 0, 'sheet', 'PNG/Lasers/laserGreen13.png');
+        this.game.physics.arcade.enable(enemyBullet);
+        this.enemyBulletsGroup.add(enemyBullet);
+        var timeToImpact = this.difficulty === Difficulty.HARD ? 3000 : 4000;
+        var projectile = new EnemyProjectile(wordManager, this.player, enemy, enemyBullet, timeToImpact);
+        this.projectiles.push(projectile);
+        this.game.time.events.add(timeToImpact, function () {
+            if (enemyBullet.alive) {
+                _this.removeProjectile(enemyBullet);
+            }
+        });
+        this.fire.play();
+    };
     Stage.prototype.loseLife = function () {
         this.game.loseLife();
         if (this.lives.length > 0) {
@@ -484,8 +526,6 @@ var Level = (function (_super) {
         this.wordCount = 0;
         this.words = [];
         this.sprites = [];
-        this.enemyBullets = [];
-        this.enemyLetters = [];
         this.targets = [];
         this.level = 1;
         this.finished = false;
@@ -503,11 +543,6 @@ var Level = (function (_super) {
             this.words.forEach(function (sprite) {
                 sprite.kill();
             }, this);
-            for (var i = 0; i < this.enemyLetters.length; i++) {
-                if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
-                    this.enemyLetters[i].kill();
-                }
-            }
             this.player.kill();
             this.wordCount = 0;
             this.level = 1;
@@ -515,8 +550,6 @@ var Level = (function (_super) {
             this.finished = false;
             this.words = [];
             this.sprites = [];
-            this.enemyBullets = [];
-            this.enemyLetters = [];
             this.player = null;
             this.wordManager.reset();
         }
@@ -532,30 +565,10 @@ var Level = (function (_super) {
         if (this.inputText.text.trim().length > 0) {
             return false;
         }
-        for (var i = 0; i < this.enemyLetters.length; i++) {
-            if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
-                if (this.enemyLetters[i].text === character) {
-                    for (var j = 0; j < this.targets.length; j++) {
-                        if (this.targets[j] === this.enemyBullets[i]) {
-                            return false;
-                        }
-                    }
-                    this.inputText.text = "";
-                    var bullet = this.bullets.getFirstExists(false);
-                    if (bullet) {
-                        this.player.angle = 0;
-                        bullet.angle = 0;
-                        this.fire.play();
-                        bullet.scale.setTo(0.5, 0.5);
-                        bullet.reset(this.player.x - 2, this.player.y - 12);
-                        bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x * 3;
-                        bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y * 3;
-                        var index = this.bullets.getChildIndex(bullet);
-                        this.targets[index] = this.enemyBullets[i];
-                        this.enemyLetters[i].fill = "#ff8888";
-                    }
-                    return true;
-                }
+        for (var i = 0; i < this.projectiles.length; i++) {
+            if (!this.projectiles[i].isIntercepted() && this.projectiles[i].matchesText(character)) {
+                this.fireAt(this.projectiles[i]);
+                return true;
             }
         }
         return false;
@@ -594,6 +607,7 @@ var Level = (function (_super) {
         }
     };
     Level.prototype.update = function () {
+        _super.prototype.update.call(this);
         if (this.finished) {
             var cleared = true;
             for (var i_1 = 0; i_1 < this.sprites.length; i_1++) {
@@ -603,12 +617,7 @@ var Level = (function (_super) {
                 }
             }
             if (cleared) {
-                for (var i_2 = 0; i_2 < this.enemyBullets.length; i_2++) {
-                    if (this.enemyBullets[i_2] !== null) {
-                        cleared = false;
-                        break;
-                    }
-                }
+                cleared = this.projectiles.length === 0;
             }
             if (cleared) {
                 var shieldHealth = this.shield === null ? 0 : this.shield.health;
@@ -623,14 +632,6 @@ var Level = (function (_super) {
                 this.words[i].kill();
                 this.sprites[i] = null;
                 this.words[i] = null;
-            }
-        }
-        for (var i = 0; i < this.enemyBullets.length; i++) {
-            if (this.enemyBullets[i] !== null && this.enemyBullets[i] !== undefined && !this.enemyBullets[i].inWorld) {
-                this.enemyBullets[i].kill();
-                this.enemyLetters[i].kill();
-                this.enemyBullets[i] = null;
-                this.enemyLetters[i] = null;
             }
         }
         if (!this.finished && this.game.time.time - this.gameTime > this.waitTime && !this.haltEnemySpawns) {
@@ -653,12 +654,6 @@ var Level = (function (_super) {
                 this.words[i].y = this.sprites[i].y + 60;
             }
         }
-        for (var i = 0; i < this.enemyBullets.length; i++) {
-            if (this.enemyBullets[i] !== null && this.enemyBullets[i] !== undefined) {
-                this.enemyLetters[i].x = this.enemyBullets[i].x;
-                this.enemyLetters[i].y = this.enemyBullets[i].y - 25;
-            }
-        }
         if (this.player.body.y < 400) {
             this.player.body.velocity.y = 0;
             this.player.body.y = 400;
@@ -677,30 +672,12 @@ var Level = (function (_super) {
         this.game.physics.arcade.overlap(this.buttons, this.sprites, this.buttonsCollided, null, this);
         this.game.physics.arcade.overlap(this.player, this.shields, this.grantShieldFromPowerUp, null, this);
     };
-    Level.prototype.fireEnemyBullet = function (attackingEnemy, letterIndex) {
-        var rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
-        rotate = Phaser.Math.radToDeg(rotate) + 90;
-        var slope = (this.player.body.y - attackingEnemy.body.y) / (this.player.body.x - attackingEnemy.body.x);
-        var enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
-        if (enemyBullet) {
-            this.fire.play();
-            enemyBullet.angle = rotate;
-            enemyBullet.scale.setTo(0.5, 0.5);
-            enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
-            enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
-            enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope;
-            var letter = this.game.add.text(0, 0, this.wordManager.getRandomLetter(), { font: 'bold 16pt Arial', fill: "#88FF88" });
-            letter.anchor.set(0.5);
-            letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-            this.enemyLetters[letterIndex] = letter;
-        }
-        return enemyBullet;
-    };
     Level.prototype.createEnemy = function (word) {
         var _this = this;
         var x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
         var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
         enemy.scale.setTo(0.5, 0.5);
+        enemy.anchor.setTo(0.5);
         enemy.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
         this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
         this.words[this.wordCount].anchor.set(0.5);
@@ -709,10 +686,9 @@ var Level = (function (_super) {
         if (this.difficulty === Difficulty.HARD) {
             var delay = 500 + (Math.random() * 1500);
             var timer = this.game.time.create(true);
-            var index_1 = this.wordCount;
             timer.add(delay, function () {
                 if (enemy.alive && !_this.haltEnemySpawns) {
-                    _this.enemyBullets[index_1] = _this.fireEnemyBullet(enemy, index_1);
+                    _this.fireFromShip(enemy);
                 }
             });
             timer.start();
@@ -726,12 +702,7 @@ var Level = (function (_super) {
     };
     Level.prototype.shieldDamagedByBullet = function (shield, bullet) {
         this.decreaseShieldHealth();
-        var index = this.enemyBullets.indexOf(bullet);
-        this.enemyBullets[index].kill();
-        this.enemyLetters[index].kill();
-        this.enemyBullets[index] = null;
-        this.enemyLetters[index] = null;
-        this.targets[index] = null;
+        this.removeProjectile(bullet);
     };
     Level.prototype.destroy = function (sprite, bullet) {
         var index = this.bullets.getChildIndex(bullet);
@@ -760,16 +731,10 @@ var Level = (function (_super) {
         }
     };
     Level.prototype.destroy2 = function (bullet, enemyBullet) {
-        var index = this.bullets.getChildIndex(bullet);
-        for (var i = 0; i < this.enemyBullets.length; i++) {
-            if (this.enemyBullets[i] === enemyBullet && this.targets[index] === this.enemyBullets[i]) {
-                this.enemyBullets[i].kill();
-                this.enemyLetters[i].kill();
-                this.enemyBullets[i] = null;
-                this.enemyLetters[i] = null;
-                this.targets[index] = null;
-                bullet.kill();
-                this.updateScore(1);
+        for (var i = 0; i < this.projectiles.length; i++) {
+            if (this.projectiles[i].contains(enemyBullet) && this.projectiles[i].isInterceptedBy(bullet)) {
+                this.removeProjectile(enemyBullet);
+                break;
             }
         }
     };
@@ -798,11 +763,6 @@ var Level = (function (_super) {
                     sprite.body.velocity.y = sprite.body.velocity.y * 2;
                 }
             });
-            this.enemyBullets.forEach(function (sprite) {
-                if (sprite !== null && sprite !== undefined) {
-                    sprite.body.velocity.y = sprite.body.velocity.y * 2;
-                }
-            });
             if (this.loseLife()) {
                 setTimeout(function () {
                     _this.player.body.velocity.y = -100;
@@ -820,12 +780,7 @@ var Level = (function (_super) {
     };
     Level.prototype.damage = function (player, enemyBullet) {
         this.decreaseHealth();
-        var index = this.enemyBullets.indexOf(enemyBullet);
-        this.enemyBullets[index].kill();
-        this.enemyLetters[index].kill();
-        this.enemyBullets[index] = null;
-        this.enemyLetters[index] = null;
-        this.targets[index] = null;
+        this.removeProjectile(enemyBullet);
     };
     Level.prototype.buttonsCollided = function (enemy, button) {
         this.animateDeath(enemy);
@@ -855,7 +810,6 @@ var BossStage = (function (_super) {
     function BossStage() {
         _super.apply(this, arguments);
         this.ships = [];
-        this.projectiles = [];
         this.shipsFired = false;
         this.boss = null;
         this.bossLaunchpadHealth = 9;
@@ -880,9 +834,7 @@ var BossStage = (function (_super) {
     };
     BossStage.prototype.update = function () {
         var _this = this;
-        this.projectiles.forEach(function (projectile) {
-            projectile.update();
-        });
+        _super.prototype.update.call(this);
         if (this.shipsFired && this.projectiles.length === 0) {
             this.shipsTextPromptCount++;
             this.timer.add(1000, function () {
@@ -1003,16 +955,6 @@ var BossStage = (function (_super) {
         }
         this.fireFromShips(1000);
     };
-    BossStage.prototype.removeProjectile = function (sprite) {
-        for (var i = 0; i < this.projectiles.length; i++) {
-            if (this.projectiles[i].contains(sprite)) {
-                this.projectiles[i].damage();
-                this.projectiles.splice(i, 1);
-                this.animateDeath(sprite);
-                return;
-            }
-        }
-    };
     BossStage.prototype.damagedByProjectile = function (player, enemyBullet) {
         this.removeProjectile(enemyBullet);
         this.decreaseHealth();
@@ -1073,20 +1015,7 @@ var BossStage = (function (_super) {
         var _this = this;
         this.timer.add(4000, function () {
             _this.enemies.forEach(function (enemy) {
-                var rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, _this.player.body.x, _this.player.body.y);
-                enemy.angle = Phaser.Math.radToDeg(rotate) - 90;
-                var enemyBullet = _this.enemyBulletsGroup.getFirstExists(false);
-                var timeToImpact = _this.difficulty === Difficulty.HARD ? 3000 : 4000;
-                var projectile = new EnemyProjectile(_this.wordManager, _this.player, enemy, enemyBullet, timeToImpact);
-                _this.projectiles.push(projectile);
-                var timer = _this.game.time.create(true);
-                timer.add(timeToImpact, function () {
-                    if (enemyBullet.alive) {
-                        _this.removeProjectile(enemyBullet);
-                    }
-                });
-                timer.start();
-                _this.fire.play();
+                _this.fireFromShip(enemy);
             }, _this, true);
             _this.shipsFired = true;
         });
@@ -1279,17 +1208,6 @@ var BossStage = (function (_super) {
             });
         }
         return timer;
-    };
-    BossStage.prototype.fireAt = function (sprite) {
-        this.inputText.text = "";
-        var bullet = this.bullets.getFirstExists(false);
-        bullet.scale.setTo(0.5, 0.5);
-        bullet.reset(this.player.x - 2, this.player.y - 12);
-        sprite.interceptedBy(bullet);
-        this.fire.play();
-        var rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, sprite.getX(), sprite.getY());
-        this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
-        bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
     };
     BossStage.prototype.shutdown = function () {
         this.timer.destroy();
