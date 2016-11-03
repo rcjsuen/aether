@@ -417,6 +417,8 @@ abstract class Stage extends Phaser.State {
 
 	protected enemies: Phaser.Group = null;
 
+	protected projectiles: EnemySprite[] = [];
+
 	protected enemyBulletsGroup: Phaser.Group;
 	
 	protected fire: Phaser.Sound;
@@ -443,6 +445,12 @@ abstract class Stage extends Phaser.State {
 			}
 		};
 		window.addEventListener("keydown", this.backspaceListener, false);
+	}
+
+	public update() {
+		this.projectiles.forEach((projectile: EnemyProjectile) => {
+			projectile.update();
+		});
 	}
 
 	public setInitialShieldHealth(initialShieldHealth: number) {
@@ -590,9 +598,6 @@ abstract class Stage extends Phaser.State {
 		this.bullets.setAll('outOfBoundsKill', true);
 
 		this.enemyBulletsGroup = this.game.add.physicsGroup();
-		this.enemyBulletsGroup.createMultiple(32,　'sheet', 'PNG/Lasers/laserGreen13.png', false);
-		this.enemyBulletsGroup.setAll('checkWorldBounds', true);
-		this.enemyBulletsGroup.setAll('outOfBoundsKill', true);
 
 		this.createKeys();
 		
@@ -699,6 +704,49 @@ abstract class Stage extends Phaser.State {
 		this.explosion.play();
 	}
 
+	protected fireAt(sprite: EnemySprite): void {
+		this.inputText.text = "";
+		let bullet = this.bullets.getFirstExists(false);
+		bullet.scale.setTo(0.5, 0.5);
+		bullet.reset(this.player.x - 2, this.player.y - 12);
+		sprite.interceptedBy(bullet);
+		this.fire.play();
+
+		let rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, sprite.getX(), sprite.getY());
+		this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
+		bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
+	}
+
+	protected removeProjectile(sprite: Phaser.Sprite) {
+		for (let i = 0; i < this.projectiles.length; i++) {
+			if (this.projectiles[i].contains(sprite)) {
+				this.projectiles[i].damage();
+				this.projectiles.splice(i, 1);
+				this.animateDeath(sprite);
+				return;
+			}
+		}
+	}
+
+	protected fireFromShip(enemy: Phaser.Sprite) {
+		let rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, this.player.body.x, this.player.body.y);
+		enemy.angle = Phaser.Math.radToDeg(rotate) - 90;
+		let wordManager = (this.game as Aether).getWordManager();
+		let enemyBullet = this.game.add.sprite(0, 0, 'sheet', 'PNG/Lasers/laserGreen13.png');
+		this.game.physics.arcade.enable(enemyBullet);
+		this.enemyBulletsGroup.add(enemyBullet);
+		let timeToImpact = this.difficulty === Difficulty.HARD ? 3000 : 4000;
+		let projectile = new EnemyProjectile(wordManager, this.player, enemy, enemyBullet, timeToImpact);
+		this.projectiles.push(projectile);
+		
+		this.game.time.events.add(timeToImpact, () => {
+			if (enemyBullet.alive) {
+				this.removeProjectile(enemyBullet);
+			}
+		});
+		this.fire.play();
+	}
+
 	protected loseLife(): boolean {
 		(this.game as Aether).loseLife();
 		if (this.lives.length > 0) {
@@ -728,8 +776,6 @@ class Level extends Stage {
 
 	private words: Phaser.Text[] = [];
 	private sprites: Phaser.Sprite[] = [];
-	private enemyBullets: Phaser.Sprite[] = [];
-	private enemyLetters: Phaser.Text[] = [];
 	private gameTime: number;
 	private targets: Phaser.Sprite[] = [];
 
@@ -763,12 +809,6 @@ class Level extends Stage {
 				sprite.kill();
 			}, this);
 
-			for (let i = 0; i < this.enemyLetters.length; i++) {
-				if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
-					this.enemyLetters[i].kill();
-				}
-			}
-
 			this.player.kill();
 
 			this.wordCount = 0;
@@ -777,8 +817,6 @@ class Level extends Stage {
 			this.finished = false;
 			this.words = [];
 			this.sprites = [];
-			this.enemyBullets = [];
-			this.enemyLetters = [];
 			this.player = null;
 			this.wordManager.reset();
 		}
@@ -802,33 +840,10 @@ class Level extends Stage {
 			return false;
 		}
 
-		for (var i = 0; i < this.enemyLetters.length; i++) {
-			if (this.enemyLetters[i] !== null && this.enemyLetters[i] !== undefined) {
-				if (this.enemyLetters[i].text === character) {
-					for (var j = 0; j < this.targets.length; j++) {
-						if (this.targets[j] === this.enemyBullets[i]) {
-							// this letter is already being handled, don't intercept
-							return false;
-						}
-					}
-
-					this.inputText.text = "";
-					let bullet = this.bullets.getFirstExists(false);
-
-					if (bullet) {
-						this.player.angle = 0;
-						bullet.angle = 0;
-						this.fire.play();
-						bullet.scale.setTo(0.5, 0.5);
-						bullet.reset(this.player.x - 2, this.player.y - 12);
-						bullet.body.velocity.x = -this.enemyBullets[i].body.velocity.x * 3;
-						bullet.body.velocity.y = -this.enemyBullets[i].body.velocity.y * 3;
-						let index = this.bullets.getChildIndex(bullet);
-						this.targets[index] = this.enemyBullets[i];
-						this.enemyLetters[i].fill = "#ff8888";
-					}
-					return true;
-				}
+		for (let i = 0; i < this.projectiles.length; i++) {
+			if (!this.projectiles[i].isIntercepted() && this.projectiles[i].matchesText(character)) {
+				this.fireAt(this.projectiles[i]);
+				return true;
 			}
 		}
 		return false;
@@ -870,6 +885,8 @@ class Level extends Stage {
 	}
 
 	public update() {
+		super.update();
+
 		if (this.finished) {
 			let cleared = true;
 			for (let i = 0; i < this.sprites.length; i++) {
@@ -880,12 +897,7 @@ class Level extends Stage {
 			}
 
 			if (cleared) {
-				for (let i = 0; i < this.enemyBullets.length; i++) {
-					if (this.enemyBullets[i] !== null) {
-						cleared = false;
-						break;
-					}
-				}
+				cleared = this.projectiles.length === 0;
 			}
 
 			if (cleared) {
@@ -904,15 +916,6 @@ class Level extends Stage {
 				this.words[i].kill();
 				this.sprites[i] = null;
 				this.words[i] = null;
-			}
-		}
-
-		for (var i = 0; i < this.enemyBullets.length; i++) {
-			if (this.enemyBullets[i] !== null && this.enemyBullets[i] !== undefined && !this.enemyBullets[i].inWorld) {
-				this.enemyBullets[i].kill();
-				this.enemyLetters[i].kill();
-				this.enemyBullets[i] = null;
-				this.enemyLetters[i] = null;
 			}
 		}
 
@@ -943,13 +946,6 @@ class Level extends Stage {
 			}
 		}
 
-		for (var i = 0; i < this.enemyBullets.length; i++) {
-			if (this.enemyBullets[i] !== null && this.enemyBullets[i] !== undefined) {
-				this.enemyLetters[i].x = this.enemyBullets[i].x;
-				this.enemyLetters[i].y = this.enemyBullets[i].y - 25;
-			}
-		}
-
 		if (this.player.body.y < 400) {
 			// stop moving the new ship
 			this.player.body.velocity.y = 0;
@@ -975,33 +971,11 @@ class Level extends Stage {
 		this.game.physics.arcade.overlap(this.player, this.shields, this.grantShieldFromPowerUp, null, this)
 	}
 
-	private fireEnemyBullet(attackingEnemy, letterIndex): Phaser.Sprite {
-		let rotate = Phaser.Math.angleBetween(attackingEnemy.body.x, attackingEnemy.body.y, this.player.body.x, this.player.body.y);
-		rotate = Phaser.Math.radToDeg(rotate) + 90;
-
-		let slope = (this.player.body.y - attackingEnemy.body.y) / (this.player.body.x - attackingEnemy.body.x);
-		let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
-
-		if (enemyBullet) {
-			this.fire.play();
-			enemyBullet.angle = rotate;
-			enemyBullet.scale.setTo(0.5, 0.5);
-			enemyBullet.reset(attackingEnemy.x + 20, attackingEnemy.y + 30);
-			enemyBullet.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_BULLET_MOVE_SPEED);
-			enemyBullet.body.velocity.x = enemyBullet.body.velocity.y / slope; 
-
-			let letter = this.game.add.text(0, 0, this.wordManager.getRandomLetter(), { font: 'bold 16pt Arial', fill: "#88FF88" });
-			letter.anchor.set(0.5);
-			letter.setShadow(5, 5, 'rgba(0,0,0,0.5)', 5);
-			this.enemyLetters[letterIndex] = letter;
-		}
-		return enemyBullet;
-	}
-
 	private createEnemy(word: string) {
 		let x = Math.floor(Math.random() * (this.game.width - 150)) + 50;
 		var enemy = this.enemies.create(x, 0, 'sheet', 'PNG/Enemies/enemyBlack1.png');
 		enemy.scale.setTo(0.5, 0.5);
+		enemy.anchor.setTo(0.5);
 		enemy.body.velocity.y = ENEMY_BULLET_MOVE_SPEED + (this.level * ENEMY_MOVE_SPEED_FACTOR);
 
 		this.words[this.wordCount] = this.game.add.text(0, 0, word, { font: 'bold 16pt Arial', fill: "#88FF88" });
@@ -1012,10 +986,9 @@ class Level extends Stage {
 		if (this.difficulty === Difficulty.HARD) {
 			let delay = 500 + (Math.random() * 1500);
 			let timer = this.game.time.create(true);
-			let index = this.wordCount;
 			timer.add(delay, () => {
 				if (enemy.alive && !this.haltEnemySpawns) {
-					this.enemyBullets[index] = this.fireEnemyBullet(enemy, index);
+					this.fireFromShip(enemy);
 				}
 			});
 			timer.start();
@@ -1031,12 +1004,7 @@ class Level extends Stage {
 
 	private shieldDamagedByBullet(shield: Phaser.Sprite, bullet: Phaser.Sprite) {
 		this.decreaseShieldHealth();
-		let index = this.enemyBullets.indexOf(bullet);
-		this.enemyBullets[index].kill();
-		this.enemyLetters[index].kill();
-		this.enemyBullets[index] = null;
-		this.enemyLetters[index] = null;
-		this.targets[index] = null;
+		this.removeProjectile(bullet);
 	}
 
 	private destroy(sprite, bullet) {
@@ -1073,18 +1041,11 @@ class Level extends Stage {
 		}
 	}
 	
-	private destroy2(bullet, enemyBullet) {
-		let index = this.bullets.getChildIndex(bullet);
-		for (let i = 0; i < this.enemyBullets.length; i++) {
-			if (this.enemyBullets[i] === enemyBullet && this.targets[index] === this.enemyBullets[i]) {
-				this.enemyBullets[i].kill();
-				this.enemyLetters[i].kill();
-				this.enemyBullets[i] = null;
-				this.enemyLetters[i] = null;
-				this.targets[index] = null;
-				bullet.kill();
-
-				this.updateScore(1);
+	private destroy2(bullet: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
+		for (let i = 0; i < this.projectiles.length; i++) {
+			if (this.projectiles[i].contains(enemyBullet) && this.projectiles[i].isInterceptedBy(bullet)) {
+				this.removeProjectile(enemyBullet);
+				break;
 			}
 		}
 	}
@@ -1124,11 +1085,6 @@ class Level extends Stage {
 					sprite.body.velocity.y = sprite.body.velocity.y * 2;
 				}
 			});
-			this.enemyBullets.forEach((sprite) => {
-				if (sprite !== null && sprite !== undefined) {
-					sprite.body.velocity.y = sprite.body.velocity.y * 2;
-				}
-			});
 
 			
 			if (this.loseLife()) {
@@ -1149,13 +1105,7 @@ class Level extends Stage {
 
 	private damage(player: Phaser.Sprite, enemyBullet: Phaser.Sprite) {
 		this.decreaseHealth();
-		
-		let index = this.enemyBullets.indexOf(enemyBullet);
-		this.enemyBullets[index].kill();
-		this.enemyLetters[index].kill();
-		this.enemyBullets[index] = null;
-		this.enemyLetters[index] = null;
-		this.targets[index] = null;
+		this.removeProjectile(enemyBullet);
 	}
 
 	/**
@@ -1197,8 +1147,6 @@ class BossStage extends Stage {
 
 	private ships: EnemyShip[] = [];
 
-	private projectiles: EnemyProjectile[] = [];
-
 	private shipsFired: boolean = false;
 
 	private boss: Phaser.Sprite = null;
@@ -1230,9 +1178,7 @@ class BossStage extends Stage {
 	}
 
 	public update(): void {
-		this.projectiles.forEach((projectile: EnemyProjectile) => {
-			projectile.update();
-		});
+		super.update();
 
 		if (this.shipsFired && this.projectiles.length === 0) {
 			// ships fired and all the projectiles are gone, give the
@@ -1389,17 +1335,6 @@ class BossStage extends Stage {
 		this.fireFromShips(1000);
 	}
 
-	private removeProjectile(sprite: Phaser.Sprite) {
-		for (let i = 0; i < this.projectiles.length; i++) {
-			if (this.projectiles[i].contains(sprite)) {
-				this.projectiles[i].damage();
-				this.projectiles.splice(i, 1);
-				this.animateDeath(sprite);
-				return;
-			}
-		}
-	}
-
 	private damagedByProjectile(player: Phaser.Sprite, enemyBullet: Phaser.Sprite): void {
 		this.removeProjectile(enemyBullet);
 		this.decreaseHealth();
@@ -1475,21 +1410,7 @@ class BossStage extends Stage {
 	private fireFromShips(timeout: number) {
 		this.timer.add(4000, () => {
 			this.enemies.forEach((enemy: Phaser.Sprite) => {
-				let rotate = Phaser.Math.angleBetween(enemy.body.x, enemy.body.y, this.player.body.x, this.player.body.y);
-				enemy.angle = Phaser.Math.radToDeg(rotate) - 90;
-				let enemyBullet = this.enemyBulletsGroup.getFirstExists(false);
-				let timeToImpact = this.difficulty === Difficulty.HARD ? 3000 : 4000;
-				let projectile = new EnemyProjectile(this.wordManager, this.player, enemy, enemyBullet, timeToImpact);
-				this.projectiles.push(projectile);
-				
-				let timer = this.game.time.create(true);
-				timer.add(timeToImpact, () => {
-					if (enemyBullet.alive) {
-						this.removeProjectile(enemyBullet);
-					}
-				});
-				timer.start(); 
-				this.fire.play();
+				this.fireFromShip(enemy);
 			}, this, true);
 			this.shipsFired = true;
 		});
@@ -1715,19 +1636,6 @@ class BossStage extends Stage {
 			});
 		}
 		return timer;
-	}
-
-	private fireAt(sprite: EnemySprite): void {
-		this.inputText.text = "";
-		let bullet = this.bullets.getFirstExists(false);
-		bullet.scale.setTo(0.5, 0.5);
-		bullet.reset(this.player.x - 2, this.player.y - 12);
-		sprite.interceptedBy(bullet);
-		this.fire.play();
-		
-		let rotate = Phaser.Math.angleBetween(this.player.body.x, this.player.body.y, sprite.getX(), sprite.getY());
-		this.player.angle = Phaser.Math.radToDeg(rotate) + 90;
-		bullet.angle = Phaser.Math.radToDeg(rotate) + 90;
 	}
 
 	public shutdown(): void {
